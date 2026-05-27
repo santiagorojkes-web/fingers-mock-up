@@ -253,7 +253,7 @@ async function proxyFetch(path, options = {}, queryString = '') {
   return res;
 }
 
-async function getUploadCredential(fileType = 'png') {
+async function getUploadCredential(fileType = 'PNG') {
   const res = await proxyFetch('/v1/upload/credential', {
     method: 'GET',
     headers: {
@@ -261,7 +261,7 @@ async function getUploadCredential(fileType = 'png') {
       'Authorization': `Bearer ${document.getElementById('apiKey').value.trim()}`,
       'Accept': '*/*'
     }
-  }, `fileType=${fileType}`);
+  }, `format=${fileType}`);
   const data = await res.json();
   if (data.code !== '200') throw new Error(`Credential error: ${data.message}`);
   return data.result;
@@ -278,7 +278,7 @@ async function uploadToS3(uploadUrl, file) {
 }
 
 async function uploadFile(file) {
-  const cred = await getUploadCredential("png");
+  const cred = await getUploadCredential("PNG");
   await uploadToS3(cred.uploadUrl, file);
   return cred.fileId;
 }
