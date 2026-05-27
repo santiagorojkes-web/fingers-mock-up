@@ -82,7 +82,21 @@ const POST = {
   GRIFA_BACK:  {y1:1453,y2:1535,x1:383,x2:450},
 };
 
-// ── PSD parsing ──────────────────────────────────────────────────
+// ── Resize canvas a máximo MAX_DIM (mantiene aspect ratio) ────────
+// Vercel tiene límite de ~4.5MB por request. 1400px → ~300-500KB JPEG.
+const MAX_DIM = 1400;
+function resizeCanvas(src) {
+  const {width:w, height:h} = src;
+  if (w <= MAX_DIM && h <= MAX_DIM) return src;
+  const scale = MAX_DIM / Math.max(w, h);
+  const c = document.createElement('canvas');
+  c.width  = Math.round(w * scale);
+  c.height = Math.round(h * scale);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+
+// ── PSD parsing ───────────────────────────────────────────────────
 function findLayer(children, name) {
   return (children||[]).find(c => c.name === name) || null;
 }
@@ -96,32 +110,39 @@ function compositeShirt(W, H, mainObj, stampLayer) {
   c.width = W; c.height = H;
   const ctx = c.getContext('2d');
   if (mainObj?.canvas) ctx.drawImage(mainObj.canvas, mainObj.left||0, mainObj.top||0);
-  const drawStamp = l => { if (!l) return; if (l.canvas) ctx.drawImage(l.canvas, l.left||0, l.top||0); (l.children||[]).forEach(drawStamp); };
+  const drawStamp = l => {
+    if (!l) return;
+    if (l.canvas) ctx.drawImage(l.canvas, l.left||0, l.top||0);
+    (l.children||[]).forEach(drawStamp);
+  };
   drawStamp(stampLayer);
   if (!mainObj) return c;
   const crop = document.createElement('canvas');
   const {left:l=0,top:t=0,right:r=W,bottom:b=H} = mainObj;
   crop.width = r-l; crop.height = b-t;
   crop.getContext('2d').drawImage(c, -l, -t);
-  return crop;
+  return resizeCanvas(crop);           // ← resize aquí, antes de base64
 }
 async function extractFromPSD(file) {
-  const buf  = await file.arrayBuffer();
-  const psd  = agPsd.readPsd(buf, {skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
+  const buf = await file.arrayBuffer();
+  const psd = agPsd.readPsd(buf, {skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
   const W = psd.width, H = psd.height;
   const leftMain  = findNested(psd,'Working Process','Left Shirt','Objects','Main Object');
   const rightMain = findNested(psd,'Working Process','Right Shirt','Objects','Main Object');
   const eFront = findLayer(psd.children,'Estampa Frontal');
   const eBack  = findLayer(psd.children,'Estampa Espalda');
+  const frontC = compositeShirt(W, H, leftMain, eFront);
+  const backC  = compositeShirt(W, H, rightMain, eBack);
+  console.log(`Front: ${frontC.width}x${frontC.height}, Back: ${backC.width}x${backC.height}`);
   return {
-    front: compositeShirt(W,H,leftMain,eFront).toDataURL('image/jpeg',.95),
-    back:  compositeShirt(W,H,rightMain,eBack).toDataURL('image/jpeg',.95),
+    front: frontC.toDataURL('image/jpeg', .92),
+    back:  backC.toDataURL('image/jpeg',  .92),
   };
 }
 
-// ── Fallback: split por gap para imágenes normales ───────────────
+// ── Fallback: split por gap ───────────────────────────────────────
 function detectGap(id) {
-  const {data:d,width:w,height:h} = id;
+  const {data:d,width:w,height:h}=id;
   const yS=Math.floor(h*.25),yE=Math.floor(h*.75);
   const bp=new Float32Array(h);
   for(let y=0;y<h;y++){let b=0;for(let x=0;x<w;x++){const i=(y*w+x)*4;if(d[i]>230&&d[i+1]>230&&d[i+2]>230)b++;}bp[y]=b/w;}
@@ -129,8 +150,7 @@ function detectGap(id) {
   for(let y=yS;y<=yE;y++){if(bp[y]>=.95&&gs<0)gs=y;if(bp[y]<.95&&gs>=0){gaps.push({s:gs,e:y});gs=-1;}}
   if(gs>=0)gaps.push({s:gs,e:yE});
   if(!gaps.length)return Math.floor(h/2);
-  const best=gaps.reduce((a,b)=>b.e-b.s>a.e-a.s?b:a);
-  return Math.floor((best.s+best.e)/2);
+  return Math.floor((gaps.reduce((a,b)=>b.e-b.s>a.e-a.s?b:a)).s+(gaps.reduce((a,b)=>b.e-b.s>a.e-a.s?b:a)).e)/2;
 }
 async function splitImageByGap(file) {
   return new Promise(resolve=>{
@@ -141,17 +161,21 @@ async function splitImageByGap(file) {
       off.getContext('2d').drawImage(img,0,0);URL.revokeObjectURL(url);
       const splitY=detectGap(off.getContext('2d').getImageData(0,0,img.width,img.height));
       const m=10;
-      const cF=document.createElement('canvas');cF.width=img.width;cF.height=splitY-m;
-      cF.getContext('2d').drawImage(off,0,0,img.width,splitY-m,0,0,img.width,splitY-m);
-      const cB=document.createElement('canvas');cB.width=img.width;cB.height=img.height-splitY-m;
-      cB.getContext('2d').drawImage(off,0,splitY+m,img.width,img.height-splitY-m,0,0,img.width,img.height-splitY-m);
-      resolve({front:cF.toDataURL('image/jpeg',.95),back:cB.toDataURL('image/jpeg',.95)});
+      const mkCrop=(y0,h)=>{
+        const c=document.createElement('canvas');c.width=img.width;c.height=h;
+        c.getContext('2d').drawImage(off,0,y0,img.width,h,0,0,img.width,h);
+        return resizeCanvas(c);         // ← resize también en fallback
+      };
+      resolve({
+        front: mkCrop(0, splitY-m).toDataURL('image/jpeg',.92),
+        back:  mkCrop(splitY+m, img.height-splitY-m).toDataURL('image/jpeg',.92),
+      });
     };
     img.src=url;
   });
 }
 
-// ── Post-proceso Canvas ──────────────────────────────────────────
+// ── Post-proceso ──────────────────────────────────────────────────
 function removeArtifact(imgData,y1,y2,x1,x2,rows=15){
   const {data:d,width:w,height:h}=imgData;
   const above=[],below=[];
@@ -198,29 +222,32 @@ async function postProcess(imgUrl,isFront){
   });
 }
 
-// ── TopView API (browser polling) ────────────────────────────────
+// ── TopView via proxy ─────────────────────────────────────────────
 async function tvProxy(path, body) {
   const res = await fetch(`/api/topview?path=${encodeURIComponent(path)}`,{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
   });
-  if(!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-  return res.json();
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch { throw new Error(`Respuesta inválida del servidor (HTTP ${res.status}): ${text.slice(0,200)}`); }
 }
-async function pollTask(taskId, onStatus) {
+async function pollTask(taskId,onStatus){
   for(let i=0;i<80;i++){
     await new Promise(r=>setTimeout(r,3000));
-    const data = await tvProxy('/api/open/v3/product/model/query',{taskId});
-    if(data.code!==0) throw new Error('Query error: '+JSON.stringify(data));
+    const data=await tvProxy('/api/open/v3/product/model/query',{taskId});
+    if(data.code!==0)throw new Error('Query error: '+JSON.stringify(data));
     const {status,resultUrl}=data.data;
-    if(onStatus) onStatus(status,i);
-    if(status==='success') return resultUrl;
-    if(status==='failed')  throw new Error('TopView: tarea fallida');
+    if(onStatus)onStatus(status,i);
+    if(status==='success')return resultUrl;
+    if(status==='failed')throw new Error('TopView: tarea fallida');
   }
-  throw new Error('Timeout: TopView tardó demasiado');
+  throw new Error('Timeout');
 }
 
-// ── UI ───────────────────────────────────────────────────────────
-let extractedFront=null, extractedBack=null;
+// ── UI ────────────────────────────────────────────────────────────
+let extractedFront=null,extractedBack=null;
 function setStatus(msg,isError=false){
   const el=document.getElementById('status');el.textContent=msg;el.className=isError?'error':'';
 }
@@ -232,14 +259,16 @@ async function onFileSelected(file){
   document.getElementById('generate-btn').disabled=true;
   try{
     let front,back;
-    if(isPSD) ({front,back}=await extractFromPSD(file));
-    else      ({front,back}=await splitImageByGap(file));
-    extractedFront=front; extractedBack=back;
+    if(isPSD)({front,back}=await extractFromPSD(file));
+    else     ({front,back}=await splitImageByGap(file));
+    extractedFront=front;extractedBack=back;
     document.getElementById('preview-front').src=front;
     document.getElementById('preview-back').src=back;
     document.getElementById('preview-row').style.display='flex';
     document.getElementById('generate-btn').disabled=false;
-    setStatus(isPSD?'✓ PSD leído':'✓ Imagen procesada');
+    // Mostrar tamaño aproximado para debug
+    const kb=f=>Math.round(f.length*.75/1024);
+    setStatus(`✓ Listo — frente ~${kb(front)}KB · espalda ~${kb(back)}KB`);
   }catch(err){console.error(err);setStatus('Error: '+err.message,true);}
 }
 
@@ -249,35 +278,42 @@ document.getElementById('generate-btn').addEventListener('click',async()=>{
   btn.disabled=true;
   document.getElementById('results').style.display='none';
   try{
-    // 1. Upload + crear tareas (server)
-    setStatus('Subiendo imágenes…');
-    const toB64=url=>url.split(',')[1];
-    const res=await fetch('/api/topview',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({frontBase64:toB64(extractedFront),backBase64:toB64(extractedBack)})
-    });
-    if(!res.ok){
-      const err=await res.json().catch(()=>({error:`HTTP ${res.status}`}));
-      throw new Error(err.error||`HTTP ${res.status}`);
-    }
-    const {frontTaskId,backTaskId}=await res.json();
+    // 1. Upload frente
+    setStatus('Subiendo frente…');
+    const frontUpload=await tvProxy('/api/open/v1/file/upload',{imageBase64:extractedFront.split(',')[1]});
+    if(frontUpload.code!==0)throw new Error('Upload frente: '+JSON.stringify(frontUpload));
 
-    // 2. Polling en el browser (evita timeout de Vercel)
-    setStatus('Generando mockups… (puede tardar ~30–60s)');
-    let fDone=false,bDone=false;
-    const [frontUrl,backUrl]=await Promise.all([
-      pollTask(frontTaskId,(s,i)=>{
-        if(!fDone&&s==='success')fDone=true;
-        if(!bDone) setStatus(`Generando… frente:${s} espalda:procesando (${i*3}s)`);
+    // 2. Upload espalda
+    setStatus('Subiendo espalda…');
+    const backUpload=await tvProxy('/api/open/v1/file/upload',{imageBase64:extractedBack.split(',')[1]});
+    if(backUpload.code!==0)throw new Error('Upload espalda: '+JSON.stringify(backUpload));
+
+    // 3. Crear tareas
+    setStatus('Creando tareas…');
+    const TEMPLATE_FRONT='7d7621e822644dd6ad2a997c4c71c609';
+    const TEMPLATE_BACK ='6a4e9340ec364a60a75bf22cd13604ae';
+    const MASK_FRONT    ='38baaeb1c16f4ec1ab994b94b69820f0';
+    const MASK_BACK     ='03b2ad6a11a44c7283e7cfac5e2733d5';
+
+    const [frontTask,backTask]=await Promise.all([
+      tvProxy('/api/open/v3/product/model/create',{
+        productFileId:frontUpload.data.fileId,templateFileId:TEMPLATE_FRONT,maskFileId:MASK_FRONT
       }),
-      pollTask(backTaskId,(s,i)=>{
-        if(!bDone&&s==='success')bDone=true;
-        if(fDone) setStatus(`Generando… frente:listo espalda:${s} (${i*3}s)`);
+      tvProxy('/api/open/v3/product/model/create',{
+        productFileId:backUpload.data.fileId,templateFileId:TEMPLATE_BACK,maskFileId:MASK_BACK
       }),
     ]);
+    if(frontTask.code!==0)throw new Error('Task frente: '+JSON.stringify(frontTask));
+    if(backTask.code!==0) throw new Error('Task espalda: '+JSON.stringify(backTask));
 
-    // 3. Post-proceso
+    // 4. Polling
+    setStatus('Generando mockups… (30–60s)');
+    const [frontUrl,backUrl]=await Promise.all([
+      pollTask(frontTask.data.taskId,(s,i)=>setStatus(`Generando… (${i*3}s) frente:${s}`)),
+      pollTask(backTask.data.taskId),
+    ]);
+
+    // 5. Post-proceso
     setStatus('Aplicando post-proceso…');
     const [fp,bp]=await Promise.all([
       postProcess(`/api/topview?proxy=${encodeURIComponent(frontUrl)}`,true),
