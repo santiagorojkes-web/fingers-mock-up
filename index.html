@@ -5,44 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fingers Crossed — Mockup Generator</title>
 <style>
-  * { box-sizing:border-box; margin:0; padding:0; }
-  :root { --bg:#0a0a0a; --fg:#f0f0f0; --gray:#666; --accent:#c8ff00; --border:#1f1f1f; }
-  body { background:var(--bg); color:var(--fg); font-family:'Helvetica Neue',Arial,sans-serif; min-height:100vh; padding:40px 20px; }
-  header { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:24px; margin-bottom:40px; }
-  .logo { font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:var(--accent); font-weight:600; }
-  .subtitle { font-size:11px; color:var(--gray); letter-spacing:.1em; text-transform:uppercase; }
-
-  .upload-zone { display:block; border:1px dashed #2a2a2a; border-radius:4px; padding:56px 40px; text-align:center; cursor:pointer; transition:border-color .2s; max-width:640px; margin:0 auto 32px; }
-  .upload-zone:hover { border-color:var(--accent); }
-  .upload-zone.drag-over { border-color:var(--accent); background:rgba(200,255,0,.03); }
-  #file-input { display:none; }
-  .upload-icon { font-size:28px; margin-bottom:14px; opacity:.35; }
-  .upload-label { font-size:13px; color:var(--gray); letter-spacing:.05em; }
-  .upload-hint { font-size:11px; color:#404040; margin-top:6px; }
-
-  #preview-row { display:none; gap:16px; max-width:640px; margin:0 auto 28px; }
-  .preview-half { flex:1; aspect-ratio:3/4; background:#111; border:1px solid var(--border); border-radius:4px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
-  .preview-half img { width:100%; height:100%; object-fit:contain; }
-  .preview-label { font-size:10px; color:var(--gray); text-align:center; letter-spacing:.1em; text-transform:uppercase; margin-top:6px; }
-
-  .generate-btn { display:block; margin:0 auto 40px; background:var(--accent); color:var(--bg); border:none; padding:14px 56px; font-size:12px; letter-spacing:.15em; text-transform:uppercase; font-weight:700; cursor:pointer; border-radius:2px; transition:background .15s; }
-  .generate-btn:hover { background:#d4ff33; }
-  .generate-btn:disabled { opacity:.3; cursor:not-allowed; }
-
-  #status { text-align:center; font-size:12px; color:var(--gray); letter-spacing:.08em; min-height:20px; margin-bottom:32px; }
-  #status.error { color:#ff5555; }
-
-  #results { display:none; max-width:800px; margin:0 auto; gap:32px; }
-  .result-card { background:#111; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
-  .result-card img { width:100%; display:block; }
-  .result-footer { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-top:1px solid var(--border); }
-  .result-title { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gray); }
-  .download-btn { background:transparent; border:1px solid var(--border); color:var(--fg); padding:6px 16px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:all .15s; text-decoration:none; }
-  .download-btn:hover { border-color:var(--accent); color:var(--accent); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0a0a0a;--fg:#f0f0f0;--gray:#666;--accent:#c8ff00;--border:#1f1f1f}
+  body{background:var(--bg);color:var(--fg);font-family:'Helvetica Neue',Arial,sans-serif;min-height:100vh;padding:40px 20px}
+  header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:40px}
+  .logo{font-size:13px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .subtitle{font-size:11px;color:var(--gray);letter-spacing:.1em;text-transform:uppercase}
+  .upload-zone{display:block;border:1px dashed #2a2a2a;border-radius:4px;padding:56px 40px;text-align:center;cursor:pointer;transition:border-color .2s;max-width:640px;margin:0 auto 32px}
+  .upload-zone:hover{border-color:var(--accent)}
+  .upload-zone.drag-over{border-color:var(--accent);background:rgba(200,255,0,.03)}
+  #file-input{display:none}
+  .upload-icon{font-size:28px;margin-bottom:14px;opacity:.35}
+  .upload-label{font-size:13px;color:var(--gray);letter-spacing:.05em}
+  .upload-hint{font-size:11px;color:#404040;margin-top:6px}
+  #preview-row{display:none;gap:16px;max-width:640px;margin:0 auto 28px}
+  .preview-half{flex:1;aspect-ratio:3/4;background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .preview-half img{width:100%;height:100%;object-fit:contain}
+  .preview-label{font-size:10px;color:var(--gray);text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
+  .generate-btn{display:block;margin:0 auto 40px;background:var(--accent);color:var(--bg);border:none;padding:14px 56px;font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px;transition:background .15s}
+  .generate-btn:hover{background:#d4ff33}
+  .generate-btn:disabled{opacity:.3;cursor:not-allowed}
+  #status{text-align:center;font-size:12px;color:var(--gray);letter-spacing:.08em;min-height:20px;margin-bottom:32px}
+  #status.error{color:#ff5555}
+  #results{display:none;max-width:800px;margin:0 auto;gap:32px}
+  .result-card{background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+  .result-card img{width:100%;display:block}
+  .result-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
+  .result-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray)}
+  .download-btn{background:transparent;border:1px solid var(--border);color:var(--fg);padding:6px 16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;text-decoration:none}
+  .download-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
-
 <header>
   <div><div class="logo">Fingers Crossed</div><div class="subtitle">Mockup Generator</div></div>
 </header>
@@ -78,131 +72,101 @@
     </div>
   </div>
 </div>
-
 <canvas id="work-canvas" style="display:none"></canvas>
-
-<!-- ag-psd: lee PSDs en el browser, sin servidor -->
 <script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js"></script>
-
 <script>
 const GRIFA_DATA_URL = 'data:image/png;base64,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';
-
-// Coordenadas post-proceso (imagen 1536×2730, template fijo)
 const POST = {
-  LABEL:       { y1:1004, y2:1040, x1:1083, x2:1235 },
-  GRIFA_FRONT: { x:490, y:1462 },
-  GRIFA_BACK:  { y1:1453, y2:1535, x1:383, x2:450 },
+  LABEL:       {y1:1004,y2:1040,x1:1083,x2:1235},
+  GRIFA_FRONT: {x:490,y:1462},
+  GRIFA_BACK:  {y1:1453,y2:1535,x1:383,x2:450},
 };
 
-// ─── LEER PSD con ag-psd ──────────────────────────────────────────
-async function parsePSD(file) {
-  const buffer   = await file.arrayBuffer();
-  const psd      = agPsd.readPsd(buffer, { skipLayerImageData: false, useRawThumbnail: false });
-  return psd;
-}
-
+// ── PSD parsing ──────────────────────────────────────────────────
 function findLayer(children, name) {
-  if (!children) return null;
-  for (const c of children) {
-    if (c.name === name) return c;
-  }
-  return null;
+  return (children||[]).find(c => c.name === name) || null;
 }
-
 function findNested(root, ...path) {
-  let curr = root;
-  for (const step of path) {
-    curr = findLayer(curr.children, step);
-    if (!curr) return null;
-  }
-  return curr;
+  let cur = root;
+  for (const s of path) { cur = findLayer(cur.children, s); if (!cur) return null; }
+  return cur;
 }
-
-// Componer una remera: Main Object + estampa encima, todo sobre canvas transparente
-function compositeShirt(psdWidth, psdHeight, mainObj, stampLayer) {
-  const canvas = document.createElement('canvas');
-  canvas.width  = psdWidth;
-  canvas.height = psdHeight;
-  const ctx = canvas.getContext('2d');
-
-  // Main Object
-  if (mainObj?.canvas) {
-    const b = mainObj;
-    ctx.drawImage(b.canvas, b.left || 0, b.top || 0);
-  }
-
-  // Estampa (si tiene imagen)
-  if (stampLayer?.canvas) {
-    const s = stampLayer;
-    ctx.drawImage(s.canvas, s.left || 0, s.top || 0);
-  } else if (stampLayer?.children) {
-    // Recorrer hijos buscando canvas
-    for (const child of stampLayer.children) {
-      if (child.canvas) {
-        ctx.drawImage(child.canvas, child.left || 0, child.top || 0);
-      }
-    }
-  }
-
-  // Crop a la bbox de la remera
-  if (!mainObj) return canvas;
-  const left   = mainObj.left   || 0;
-  const top    = mainObj.top    || 0;
-  const right  = mainObj.right  || psdWidth;
-  const bottom = mainObj.bottom || psdHeight;
-
-  const cropped = document.createElement('canvas');
-  cropped.width  = right - left;
-  cropped.height = bottom - top;
-  cropped.getContext('2d').drawImage(canvas, -left, -top);
-  return cropped;
+function compositeShirt(W, H, mainObj, stampLayer) {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  if (mainObj?.canvas) ctx.drawImage(mainObj.canvas, mainObj.left||0, mainObj.top||0);
+  const drawStamp = l => { if (!l) return; if (l.canvas) ctx.drawImage(l.canvas, l.left||0, l.top||0); (l.children||[]).forEach(drawStamp); };
+  drawStamp(stampLayer);
+  if (!mainObj) return c;
+  const crop = document.createElement('canvas');
+  const {left:l=0,top:t=0,right:r=W,bottom:b=H} = mainObj;
+  crop.width = r-l; crop.height = b-t;
+  crop.getContext('2d').drawImage(c, -l, -t);
+  return crop;
 }
-
 async function extractFromPSD(file) {
-  const psd = await parsePSD(file);
-
-  // Leer layers como canvas (necesario para composite)
-  const psd2 = agPsd.readPsd(await file.arrayBuffer(), {
-    skipLayerImageData: false,
-    useRawThumbnail: false,
-    useImageData: false,
-  });
-
-  // Obtener Main Objects
-  const leftMain  = findNested(psd2, 'Working Process', 'Left Shirt',  'Objects', 'Main Object');
-  const rightMain = findNested(psd2, 'Working Process', 'Right Shirt', 'Objects', 'Main Object');
-
-  // Obtener estampas
-  const estampaFront = findLayer(psd2.children, 'Estampa Frontal');
-  const estampaBack  = findLayer(psd2.children, 'Estampa Espalda');
-
-  const W = psd2.width, H = psd2.height;
-
-  const frontCanvas = compositeShirt(W, H, leftMain,  estampaFront);
-  const backCanvas  = compositeShirt(W, H, rightMain, estampaBack);
-
+  const buf  = await file.arrayBuffer();
+  const psd  = agPsd.readPsd(buf, {skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
+  const W = psd.width, H = psd.height;
+  const leftMain  = findNested(psd,'Working Process','Left Shirt','Objects','Main Object');
+  const rightMain = findNested(psd,'Working Process','Right Shirt','Objects','Main Object');
+  const eFront = findLayer(psd.children,'Estampa Frontal');
+  const eBack  = findLayer(psd.children,'Estampa Espalda');
   return {
-    front: frontCanvas.toDataURL('image/jpeg', 0.95),
-    back:  backCanvas.toDataURL('image/jpeg',  0.95),
+    front: compositeShirt(W,H,leftMain,eFront).toDataURL('image/jpeg',.95),
+    back:  compositeShirt(W,H,rightMain,eBack).toDataURL('image/jpeg',.95),
   };
 }
 
-// ─── POST-PROCESO Canvas ──────────────────────────────────────────
-function removeArtifact(imgData, y1, y2, x1, x2, rows=15) {
-  const { data: d, width: w, height: h } = imgData;
-  const above = [], below = [];
-  for (let x=x1; x<x2; x++) {
+// ── Fallback: split por gap para imágenes normales ───────────────
+function detectGap(id) {
+  const {data:d,width:w,height:h} = id;
+  const yS=Math.floor(h*.25),yE=Math.floor(h*.75);
+  const bp=new Float32Array(h);
+  for(let y=0;y<h;y++){let b=0;for(let x=0;x<w;x++){const i=(y*w+x)*4;if(d[i]>230&&d[i+1]>230&&d[i+2]>230)b++;}bp[y]=b/w;}
+  let gaps=[],gs=-1;
+  for(let y=yS;y<=yE;y++){if(bp[y]>=.95&&gs<0)gs=y;if(bp[y]<.95&&gs>=0){gaps.push({s:gs,e:y});gs=-1;}}
+  if(gs>=0)gaps.push({s:gs,e:yE});
+  if(!gaps.length)return Math.floor(h/2);
+  const best=gaps.reduce((a,b)=>b.e-b.s>a.e-a.s?b:a);
+  return Math.floor((best.s+best.e)/2);
+}
+async function splitImageByGap(file) {
+  return new Promise(resolve=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const off=document.createElement('canvas');
+      off.width=img.width;off.height=img.height;
+      off.getContext('2d').drawImage(img,0,0);URL.revokeObjectURL(url);
+      const splitY=detectGap(off.getContext('2d').getImageData(0,0,img.width,img.height));
+      const m=10;
+      const cF=document.createElement('canvas');cF.width=img.width;cF.height=splitY-m;
+      cF.getContext('2d').drawImage(off,0,0,img.width,splitY-m,0,0,img.width,splitY-m);
+      const cB=document.createElement('canvas');cB.width=img.width;cB.height=img.height-splitY-m;
+      cB.getContext('2d').drawImage(off,0,splitY+m,img.width,img.height-splitY-m,0,0,img.width,img.height-splitY-m);
+      resolve({front:cF.toDataURL('image/jpeg',.95),back:cB.toDataURL('image/jpeg',.95)});
+    };
+    img.src=url;
+  });
+}
+
+// ── Post-proceso Canvas ──────────────────────────────────────────
+function removeArtifact(imgData,y1,y2,x1,x2,rows=15){
+  const {data:d,width:w,height:h}=imgData;
+  const above=[],below=[];
+  for(let x=x1;x<x2;x++){
     let r=0,g=0,b=0,n=0;
-    for (let y=Math.max(0,y1-rows); y<y1; y++) { const i=(y*w+x)*4; r+=d[i];g+=d[i+1];b+=d[i+2];n++; }
+    for(let y=Math.max(0,y1-rows);y<y1;y++){const i=(y*w+x)*4;r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
     above.push(n?[r/n,g/n,b/n]:[230,230,230]);
     r=g=b=n=0;
-    for (let y=y2; y<Math.min(h,y2+rows); y++) { const i=(y*w+x)*4; r+=d[i];g+=d[i+1];b+=d[i+2];n++; }
+    for(let y=y2;y<Math.min(h,y2+rows);y++){const i=(y*w+x)*4;r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
     below.push(n?[r/n,g/n,b/n]:[230,230,230]);
   }
   const rh=y2-y1;
-  for (let row=0;row<rh;row++) {
+  for(let row=0;row<rh;row++){
     const t=rh>1?row/(rh-1):0;
-    for (let col=0;col<(x2-x1);col++) {
+    for(let col=0;col<(x2-x1);col++){
       const i=((y1+row)*w+(x1+col))*4;
       d[i]  =Math.round(above[col][0]*(1-t)+below[col][0]*t);
       d[i+1]=Math.round(above[col][1]*(1-t)+below[col][1]*t);
@@ -211,130 +175,113 @@ function removeArtifact(imgData, y1, y2, x1, x2, rows=15) {
   }
   return imgData;
 }
-
-async function postProcess(imgUrl, isFront) {
-  return new Promise((resolve, reject) => {
-    const img=new Image(); img.crossOrigin='anonymous';
-    img.onload = async () => {
+async function postProcess(imgUrl,isFront){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=async()=>{
       const c=document.getElementById('work-canvas');
-      c.width=img.width; c.height=img.height;
-      const ctx=c.getContext('2d');
-      ctx.drawImage(img,0,0);
+      c.width=img.width;c.height=img.height;
+      const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
       let d=ctx.getImageData(0,0,c.width,c.height);
-      if (isFront) {
+      if(isFront){
         d=removeArtifact(d,POST.LABEL.y1,POST.LABEL.y2,POST.LABEL.x1,POST.LABEL.x2);
         ctx.putImageData(d,0,0);
-        const grifa=new Image();
-        grifa.onload=()=>{ ctx.drawImage(grifa,POST.GRIFA_FRONT.x,POST.GRIFA_FRONT.y); resolve(c.toDataURL('image/jpeg',0.95)); };
-        grifa.onerror=reject; grifa.src=GRIFA_DATA_URL;
-      } else {
+        const g=new Image();
+        g.onload=()=>{ctx.drawImage(g,POST.GRIFA_FRONT.x,POST.GRIFA_FRONT.y);resolve(c.toDataURL('image/jpeg',.95));};
+        g.onerror=reject;g.src=GRIFA_DATA_URL;
+      }else{
         d=removeArtifact(d,POST.GRIFA_BACK.y1,POST.GRIFA_BACK.y2,POST.GRIFA_BACK.x1,POST.GRIFA_BACK.x2);
-        ctx.putImageData(d,0,0);
-        resolve(c.toDataURL('image/jpeg',0.95));
+        ctx.putImageData(d,0,0);resolve(c.toDataURL('image/jpeg',.95));
       }
     };
-    img.onerror=reject; img.src=imgUrl;
+    img.onerror=reject;img.src=imgUrl;
   });
 }
 
-// ─── MAIN FLOW ────────────────────────────────────────────────────
-let extractedFront = null, extractedBack = null;
-
-function setStatus(msg, isError=false) {
-  const el=document.getElementById('status');
-  el.textContent=msg; el.className=isError?'error':'';
+// ── TopView API (browser polling) ────────────────────────────────
+async function tvProxy(path, body) {
+  const res = await fetch(`/api/topview?path=${encodeURIComponent(path)}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+  return res.json();
 }
-
-async function onFileSelected(file) {
-  if (!file) return;
-  const isPSD = file.name.toLowerCase().endsWith('.psd');
-
-  setStatus(isPSD ? 'Leyendo PSD…' : 'Procesando imagen…');
-  document.getElementById('generate-btn').disabled = true;
-
-  try {
-    let front, back;
-
-    if (isPSD) {
-      // Extraer directamente del PSD
-      ({ front, back } = await extractFromPSD(file));
-    } else {
-      // Fallback: corte inteligente por brillo (imagen .jpg/.png)
-      ({ front, back } = await splitImageByGap(file));
-    }
-
-    extractedFront = front;
-    extractedBack  = back;
-
-    document.getElementById('preview-front').src = front;
-    document.getElementById('preview-back').src  = back;
-    document.getElementById('preview-row').style.display = 'flex';
-    document.getElementById('generate-btn').disabled = false;
-    setStatus(isPSD ? '✓ PSD leído — frente y espalda extraídas' : '✓ Imagen cortada');
-  } catch(err) {
-    console.error(err);
-    setStatus('Error al procesar: ' + err.message, true);
+async function pollTask(taskId, onStatus) {
+  for(let i=0;i<80;i++){
+    await new Promise(r=>setTimeout(r,3000));
+    const data = await tvProxy('/api/open/v3/product/model/query',{taskId});
+    if(data.code!==0) throw new Error('Query error: '+JSON.stringify(data));
+    const {status,resultUrl}=data.data;
+    if(onStatus) onStatus(status,i);
+    if(status==='success') return resultUrl;
+    if(status==='failed')  throw new Error('TopView: tarea fallida');
   }
+  throw new Error('Timeout: TopView tardó demasiado');
 }
 
-// Fallback: detección de gap para imágenes normales
-async function splitImageByGap(file) {
-  return new Promise(resolve => {
-    const img=new Image(), url=URL.createObjectURL(file);
-    img.onload=()=>{
-      const off=document.createElement('canvas');
-      off.width=img.width; off.height=img.height;
-      off.getContext('2d').drawImage(img,0,0);
-      URL.revokeObjectURL(url);
-      const id=off.getContext('2d').getImageData(0,0,img.width,img.height);
-      const splitY=detectGap(id);
-      const m=10;
-      const cF=document.createElement('canvas'); cF.width=img.width; cF.height=splitY-m;
-      cF.getContext('2d').drawImage(off,0,0,img.width,splitY-m,0,0,img.width,splitY-m);
-      const cB=document.createElement('canvas'); cB.width=img.width; cB.height=img.height-splitY-m;
-      cB.getContext('2d').drawImage(off,0,splitY+m,img.width,img.height-splitY-m,0,0,img.width,img.height-splitY-m);
-      resolve({ front:cF.toDataURL('image/jpeg',.95), back:cB.toDataURL('image/jpeg',.95) });
-    };
-    img.src=url;
-  });
+// ── UI ───────────────────────────────────────────────────────────
+let extractedFront=null, extractedBack=null;
+function setStatus(msg,isError=false){
+  const el=document.getElementById('status');el.textContent=msg;el.className=isError?'error':'';
 }
 
-function detectGap(imageData) {
-  const {data:d,width:w,height:h}=imageData;
-  const yS=Math.floor(h*.25), yE=Math.floor(h*.75);
-  const bp=new Float32Array(h);
-  for (let y=0;y<h;y++) { let b=0; for (let x=0;x<w;x++) { const i=(y*w+x)*4; if(d[i]>230&&d[i+1]>230&&d[i+2]>230)b++; } bp[y]=b/w; }
-  let gaps=[],gs=-1;
-  for (let y=yS;y<=yE;y++) { if(bp[y]>=.95&&gs<0)gs=y; if(bp[y]<.95&&gs>=0){gaps.push({s:gs,e:y});gs=-1;} }
-  if(gs>=0)gaps.push({s:gs,e:yE});
-  if(!gaps.length)return Math.floor(h/2);
-  const best=gaps.reduce((a,b)=>b.e-b.s>a.e-a.s?b:a);
-  return Math.floor((best.s+best.e)/2);
+async function onFileSelected(file){
+  if(!file)return;
+  const isPSD=file.name.toLowerCase().endsWith('.psd');
+  setStatus(isPSD?'Leyendo PSD…':'Procesando imagen…');
+  document.getElementById('generate-btn').disabled=true;
+  try{
+    let front,back;
+    if(isPSD) ({front,back}=await extractFromPSD(file));
+    else      ({front,back}=await splitImageByGap(file));
+    extractedFront=front; extractedBack=back;
+    document.getElementById('preview-front').src=front;
+    document.getElementById('preview-back').src=back;
+    document.getElementById('preview-row').style.display='flex';
+    document.getElementById('generate-btn').disabled=false;
+    setStatus(isPSD?'✓ PSD leído':'✓ Imagen procesada');
+  }catch(err){console.error(err);setStatus('Error: '+err.message,true);}
 }
 
-document.getElementById('generate-btn').addEventListener('click', async () => {
-  if (!extractedFront || !extractedBack) return;
+document.getElementById('generate-btn').addEventListener('click',async()=>{
+  if(!extractedFront||!extractedBack)return;
   const btn=document.getElementById('generate-btn');
   btn.disabled=true;
   document.getElementById('results').style.display='none';
-
-  try {
-    setStatus('Enviando a TopView…');
-
-    // Enviar al proxy como data URL (base64)
-    const toB64 = dataUrl => dataUrl.split(',')[1];
-    const res = await fetch('/api/topview', {
+  try{
+    // 1. Upload + crear tareas (server)
+    setStatus('Subiendo imágenes…');
+    const toB64=url=>url.split(',')[1];
+    const res=await fetch('/api/topview',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ frontBase64: toB64(extractedFront), backBase64: toB64(extractedBack) })
+      body:JSON.stringify({frontBase64:toB64(extractedFront),backBase64:toB64(extractedBack)})
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const {frontUrl, backUrl} = await res.json();
+    if(!res.ok){
+      const err=await res.json().catch(()=>({error:`HTTP ${res.status}`}));
+      throw new Error(err.error||`HTTP ${res.status}`);
+    }
+    const {frontTaskId,backTaskId}=await res.json();
 
+    // 2. Polling en el browser (evita timeout de Vercel)
+    setStatus('Generando mockups… (puede tardar ~30–60s)');
+    let fDone=false,bDone=false;
+    const [frontUrl,backUrl]=await Promise.all([
+      pollTask(frontTaskId,(s,i)=>{
+        if(!fDone&&s==='success')fDone=true;
+        if(!bDone) setStatus(`Generando… frente:${s} espalda:procesando (${i*3}s)`);
+      }),
+      pollTask(backTaskId,(s,i)=>{
+        if(!bDone&&s==='success')bDone=true;
+        if(fDone) setStatus(`Generando… frente:listo espalda:${s} (${i*3}s)`);
+      }),
+    ]);
+
+    // 3. Post-proceso
     setStatus('Aplicando post-proceso…');
-    const [fp, bp] = await Promise.all([
-      postProcess(`/api/topview?proxy=${encodeURIComponent(frontUrl)}`, true),
-      postProcess(`/api/topview?proxy=${encodeURIComponent(backUrl)}`,  false),
+    const [fp,bp]=await Promise.all([
+      postProcess(`/api/topview?proxy=${encodeURIComponent(frontUrl)}`,true),
+      postProcess(`/api/topview?proxy=${encodeURIComponent(backUrl)}`,false),
     ]);
 
     document.getElementById('result-front').src=fp;
@@ -343,24 +290,22 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     document.getElementById('dl-back').href=bp;
     document.getElementById('results').style.display='grid';
     setStatus('✓ Listo');
-  } catch(err) {
+  }catch(err){
     console.error(err);
-    setStatus('Error: '+err.message, true);
+    setStatus('Error: '+err.message,true);
   }
   btn.disabled=false;
 });
 
-// Eventos UI
-document.getElementById('file-input').addEventListener('change', e => onFileSelected(e.target.files[0]));
+document.getElementById('file-input').addEventListener('change',e=>onFileSelected(e.target.files[0]));
 const dz=document.getElementById('drop-zone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
 dz.addEventListener('drop',e=>{
-  e.preventDefault(); dz.classList.remove('drag-over');
-  const f=e.dataTransfer.files[0]; if(!f) return;
-  const dt=new DataTransfer(); dt.items.add(f);
-  document.getElementById('file-input').files=dt.files;
-  onFileSelected(f);
+  e.preventDefault();dz.classList.remove('drag-over');
+  const f=e.dataTransfer.files[0];if(!f)return;
+  const dt=new DataTransfer();dt.items.add(f);
+  document.getElementById('file-input').files=dt.files;onFileSelected(f);
 });
 </script>
 </body>
