@@ -1,7 +1,6 @@
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
@@ -14,7 +13,6 @@ export default async function handler(req) {
 
   try {
     const url = new URL(req.url);
-    // Extract the target TopView path from query param
     const targetPath = url.searchParams.get('path');
     const queryString = url.searchParams.get('query') || '';
 
@@ -25,29 +23,29 @@ export default async function handler(req) {
       });
     }
 
+    // Build target URL — append query string directly
     const targetUrl = `https://api.topview.ai${targetPath}${queryString ? '?' + queryString : ''}`;
 
-    // Forward headers
-    const forwardHeaders = {};
+    // Forward only relevant headers
+    const forwardHeaders = { 'Accept': '*/*' };
     const uid = req.headers.get('Topview-Uid');
     const auth = req.headers.get('Authorization');
     const contentType = req.headers.get('Content-Type');
-
     if (uid) forwardHeaders['Topview-Uid'] = uid;
     if (auth) forwardHeaders['Authorization'] = auth;
-    if (contentType) forwardHeaders['Content-Type'] = contentType;
-    forwardHeaders['Accept'] = '*/*';
+    // Only set Content-Type for non-GET requests with a body
+    if (contentType && req.method !== 'GET') forwardHeaders['Content-Type'] = contentType;
 
-    // Forward body if present
     let body = undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await req.arrayBuffer();
+      if (body.byteLength === 0) body = undefined;
     }
 
     const response = await fetch(targetUrl, {
       method: req.method,
       headers: forwardHeaders,
-      body: body || undefined,
+      body,
     });
 
     const responseData = await response.arrayBuffer();
