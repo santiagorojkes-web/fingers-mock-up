@@ -5,470 +5,485 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fingers Crossed — Mockup Generator</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0a; --surface: #111111; --border: #222222;
-    --accent: #e8ff3c; --text: #f0f0f0; --muted: #666;
-    --success: #3cffa0; --error: #ff4d4d; --warning: #ffaa3c;
+    --black: #0a0a0a;
+    --white: #f5f5f5;
+    --gray: #888;
+    --accent: #c8ff00;
+    --border: #222;
   }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; padding: 2rem; }
-  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-  .logo { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
-  .logo span { color: var(--text); }
-  .version { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; }
-  .credentials { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .cred-field label { display: block; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.4rem; }
-  .cred-field input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.75rem; outline: none; transition: border-color 0.2s; }
-  .cred-field input:focus { border-color: var(--accent); }
-  .upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; margin-bottom: 2rem; }
-  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: rgba(232,255,60,0.03); }
-  .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-  .upload-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
-  .upload-zone h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
-  .upload-zone p { font-size: 0.8rem; color: var(--muted); font-family: 'DM Mono', monospace; }
-  .queue { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-  .queue-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: relative; }
-  .queue-item img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
-  .queue-item .item-info { padding: 0.6rem 0.8rem; }
-  .queue-item .item-name { font-size: 0.7rem; font-family: 'DM Mono', monospace; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.3rem; }
-  .queue-item .item-status { font-size: 0.65rem; font-family: 'DM Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 0.3rem; }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-  .status-dot.pending { background: var(--muted); }
-  .status-dot.uploading { background: var(--warning); animation: pulse 1s infinite; }
-  .status-dot.processing { background: var(--accent); animation: pulse 0.8s infinite; }
-  .status-dot.done { background: var(--success); }
-  .status-dot.error { background: var(--error); }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-  .queue-item .remove-btn { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; background: rgba(0,0,0,0.7); border: none; border-radius: 50%; color: var(--text); cursor: pointer; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
-  .queue-item:hover .remove-btn { opacity: 1; }
-  .actions { display: flex; gap: 1rem; margin-bottom: 2rem; align-items: center; flex-wrap: wrap; }
-  .btn { padding: 0.8rem 1.8rem; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; letter-spacing: 0.05em; transition: all 0.15s; text-transform: uppercase; }
-  .btn-primary { background: var(--accent); color: #000; }
-  .btn-primary:hover { background: #f5ff70; transform: translateY(-1px); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
-  .progress-bar { height: 3px; background: var(--border); border-radius: 99px; margin-bottom: 2rem; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; width: 0%; }
-  .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .result-card .result-header { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .result-card .result-name { font-size: 0.75rem; font-family: 'DM Mono', monospace; color: var(--muted); }
-  .result-card .result-badge { font-size: 0.6rem; font-family: 'DM Mono', monospace; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
-  .badge-front { background: rgba(232,255,60,0.15); color: var(--accent); }
-  .badge-back { background: rgba(60,255,160,0.15); color: var(--success); }
-  .result-card img { width: 100%; display: block; aspect-ratio: 4/5; object-fit: cover; background: #fff; }
-  .result-card .result-actions { padding: 0.8rem 1rem; display: flex; gap: 0.5rem; }
-  .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.7rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; }
-  .btn-sm:hover { background: var(--border); }
-  .btn-sm.primary { background: var(--accent); color: #000; border-color: var(--accent); }
-  .btn-sm.primary:hover { background: #f5ff70; }
-  .log { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; font-family: 'DM Mono', monospace; font-size: 0.72rem; max-height: 200px; overflow-y: auto; margin-bottom: 2rem; }
-  .log-line { padding: 0.15rem 0; color: var(--muted); line-height: 1.6; }
-  .log-line.info { color: var(--text); }
-  .log-line.success { color: var(--success); }
-  .log-line.error { color: var(--error); }
-  .log-line.warn { color: var(--warning); }
-  .section-title { font-size: 0.65rem; font-family: 'DM Mono', monospace; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.8rem; }
-  .stats { display: flex; gap: 1.5rem; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-left: auto; }
-  .stats span { color: var(--text); }
-  .label-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem; font-size: 0.75rem; color: var(--muted); font-family: 'DM Mono', monospace; }
-  .label-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
-  .download-all-btn { display: none; }
-  .download-all-btn.visible { display: flex; }
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 40px;
+  }
+  .logo {
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .subtitle { font-size: 11px; color: var(--gray); letter-spacing: 0.1em; text-transform: uppercase; }
+  
+  .upload-zone {
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 48px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    max-width: 600px;
+    margin: 0 auto 40px;
+    position: relative;
+  }
+  .upload-zone:hover { border-color: var(--accent); }
+  .upload-zone.drag-over { border-color: var(--accent); background: rgba(200,255,0,0.03); }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+  .upload-label { font-size: 13px; color: var(--gray); letter-spacing: 0.05em; }
+  .upload-hint { font-size: 11px; color: #555; margin-top: 8px; }
+
+  #preview-row {
+    display: none;
+    gap: 16px;
+    max-width: 600px;
+    margin: 0 auto 32px;
+  }
+  .preview-half {
+    flex: 1;
+    aspect-ratio: 1;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-half img { width: 100%; height: 100%; object-fit: contain; }
+  .preview-label { font-size: 10px; color: var(--gray); text-align: center; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px; }
+
+  .generate-btn {
+    display: block;
+    margin: 0 auto 40px;
+    background: var(--accent);
+    color: var(--black);
+    border: none;
+    padding: 14px 48px;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .generate-btn:hover { background: #d4ff33; }
+  .generate-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  #status {
+    text-align: center;
+    font-size: 12px;
+    color: var(--gray);
+    letter-spacing: 0.08em;
+    min-height: 20px;
+    margin-bottom: 32px;
+  }
+  #status.error { color: #ff5555; }
+  #status .dot {
+    display: inline-block;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+  #results {
+    display: none;
+    max-width: 800px;
+    margin: 0 auto;
+    gap: 32px;
+  }
+  .result-card {
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .result-card img { width: 100%; display: block; }
+  .result-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .result-title { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray); }
+  .download-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 6px 16px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .download-btn:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">Fingers <span>Crossed</span> — Mockup Gen</div>
-  <div class="version">v2.0 · TopView API</div>
+  <div>
+    <div class="logo">Fingers Crossed</div>
+    <div class="subtitle">Mockup Generator</div>
+  </div>
 </header>
 
-<div class="section-title">Credenciales API</div>
-<div class="credentials">
-  <div class="cred-field">
-    <label>Topview-Uid</label>
-    <input type="text" id="topviewUid" value="8EOyIj2GRQ0Ksxi0qEc4">
+<div class="upload-zone" id="drop-zone">
+  <input type="file" id="file-input" accept="image/*">
+  <div class="upload-icon">⊕</div>
+  <div class="upload-label">Subir imagen de remera</div>
+  <div class="upload-hint">Frente a la izquierda · Espalda a la derecha</div>
+</div>
+
+<div id="preview-row">
+  <div>
+    <div class="preview-half"><img id="preview-front" /></div>
+    <div class="preview-label">Frente</div>
   </div>
-  <div class="cred-field">
-    <label>API Key (Bearer)</label>
-    <input type="password" id="apiKey" value="sk-dPXUdN-0XmRsv6u7wPfu_Jl5lZKC11HOsCvMESsEA34">
-  </div>
-</div>
-
-<div class="label-preview">
-  <div class="label-dot"></div>
-  Etiqueta Fingers Crossed — aplicada automáticamente en manga izquierda (frente)
-</div>
-
-<div class="section-title">Cargar remeras (frente izq / espalda der en una imagen)</div>
-<div class="upload-zone" id="uploadZone">
-  <input type="file" id="fileInput" accept="image/*" multiple>
-  <span class="upload-icon">⬆</span>
-  <h3>Arrastrá o hacé clic para subir</h3>
-  <p>PNG, JPG · hasta 25 remeras · frente izq / espalda der</p>
-</div>
-
-<div id="queueSection" style="display:none">
-  <div class="section-title">Cola de procesamiento</div>
-  <div class="queue" id="queue"></div>
-</div>
-
-<div class="progress-bar" id="progressBar" style="display:none">
-  <div class="progress-fill" id="progressFill"></div>
-</div>
-
-<div class="actions">
-  <button class="btn btn-primary" id="generateBtn" onclick="startGeneration()" disabled>Generar mockups</button>
-  <button class="btn btn-ghost" onclick="clearQueue()">Limpiar</button>
-  <button class="btn btn-sm primary download-all-btn" id="downloadAllBtn" onclick="downloadAll()">Descargar todo (ZIP)</button>
-  <div class="stats" id="stats" style="display:none">
-    <div>Total: <span id="statTotal">0</span></div>
-    <div>Listos: <span id="statDone">0</span></div>
-    <div>Errores: <span id="statError">0</span></div>
+  <div>
+    <div class="preview-half"><img id="preview-back" /></div>
+    <div class="preview-label">Espalda</div>
   </div>
 </div>
 
-<div class="log" id="log">
-  <div class="log-line">Sistema listo. Cargá tus imágenes para comenzar.</div>
+<button class="generate-btn" id="generate-btn" disabled>Generar Mockup</button>
+
+<div id="status"></div>
+
+<div id="results">
+  <div class="result-card">
+    <img id="result-front" />
+    <div class="result-footer">
+      <span class="result-title">Frente</span>
+      <a class="download-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a>
+    </div>
+  </div>
+  <div class="result-card">
+    <img id="result-back" />
+    <div class="result-footer">
+      <span class="result-title">Espalda</span>
+      <a class="download-btn" id="dl-back" download="mockup_espalda.jpg">Descargar</a>
+    </div>
+  </div>
 </div>
 
-<div id="resultsSection" style="display:none">
-  <div class="section-title">Resultados</div>
-  <div class="results" id="results"></div>
-</div>
+<canvas id="work-canvas" style="display:none"></canvas>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
+// ─── CONFIG ────────────────────────────────────────────────────
+const TOPVIEW_UID = '8EOyIj2GRQ0Ksxi0qEc4';
+const API_KEY = 'sk-dPXUdN-0XmRsv6u7wPfu_Jl5lZKC11HOsCvMESsEA34';
 
-const CONFIG = {
-  TEMPLATE_FRONT_FILE_ID: '7d7621e822644dd6ad2a997c4c71c609',
-  TEMPLATE_BACK_FILE_ID: '6a4e9340ec364a60a75bf22cd13604ae',
-  MASK_FRONT_FILE_ID: '38baaeb1c16f4ec1ab994b94b69820f0',
-  MASK_BACK_FILE_ID: '03b2ad6a11a44c7283e7cfac5e2733d5',
+const TEMPLATE_FRONT_FILE_ID = '7d7621e822644dd6ad2a997c4c71c609';
+const TEMPLATE_BACK_FILE_ID  = '6a4e9340ec364a60a75bf22cd13604ae';
+const MASK_FRONT_FILE_ID     = '38baaeb1c16f4ec1ab994b94b69820f0';
+const MASK_BACK_FILE_ID      = '03b2ad6a11a44c7283e7cfac5e2733d5';
+
+// Coordenadas POST-PROCESO (para imágenes 1536x2730 del template fijo)
+const POST = {
+  // FRENTE: zona de la etiqueta interna a eliminar
+  LABEL: { y1: 1004, y2: 1040, x1: 1083, x2: 1235, sample: 15 },
+  // FRENTE: posición de la grifa en la manga
+  GRIFA_FRONT: { x: 490, y: 1462 },
+  // ESPALDA: zona de la grifa a eliminar
+  GRIFA_BACK: { y1: 1453, y2: 1535, x1: 383, x2: 450, sample: 15 },
 };
 
-// Proxy URL — calls go through /api/topview to avoid CORS
-const PROXY = '/api/topview';
 
-let queue = [];
-let results = [];
-let isProcessing = false;
+// ─── GRIFA IMAGE (base64 PNG, 55x80px, transparent background) ────
+const GRIFA_DATA_URL = 'data:image/png;base64,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';
 
-function log(msg, type = 'info') {
-  const logEl = document.getElementById('log');
-  const line = document.createElement('div');
-  line.className = `log-line ${type}`;
-  const time = new Date().toLocaleTimeString('es-AR', { hour12: false });
-  line.textContent = `[${time}] ${msg}`;
-  logEl.appendChild(line);
-  logEl.scrollTop = logEl.scrollHeight;
-}
+// ─── CANVAS POST-PROCESSING ────────────────────────────────────────
 
-// ── Upload zone ──
-const uploadZone = document.getElementById('uploadZone');
-const fileInput  = document.getElementById('fileInput');
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
-uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); addFiles(Array.from(e.dataTransfer.files)); });
-fileInput.addEventListener('change', () => addFiles(Array.from(fileInput.files)));
+function removeArtifactInterpolate(ctx, imgData, y1, y2, x1, x2, sampleRows = 15) {
+  const w = imgData.width;
+  const d = imgData.data;
 
-function addFiles(files) {
-  const imgs = files.filter(f => f.type.startsWith('image/'));
-  if (!imgs.length) { log('No se encontraron imágenes válidas', 'warn'); return; }
-  if (queue.length + imgs.length > 25) { log('Máximo 25 remeras por vez', 'warn'); return; }
-  imgs.forEach(file => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    queue.push({ id, file, name: file.name, status: 'pending', frontUrl: null, backUrl: null });
-    renderQueueItem(queue[queue.length - 1]);
-    log(`Agregada: ${file.name}`);
-  });
-  document.getElementById('queueSection').style.display = 'block';
-  document.getElementById('generateBtn').disabled = false;
-  updateStats();
-}
-
-function renderQueueItem(item) {
-  const q = document.getElementById('queue');
-  const div = document.createElement('div');
-  div.className = 'queue-item';
-  div.id = `qi-${item.id}`;
-  const reader = new FileReader();
-  reader.onload = e => {
-    div.innerHTML = `
-      <img src="${e.target.result}" alt="${item.name}">
-      <button class="remove-btn" onclick="removeItem('${item.id}')">✕</button>
-      <div class="item-info">
-        <div class="item-name">${item.name}</div>
-        <div class="item-status">
-          <div class="status-dot pending" id="dot-${item.id}"></div>
-          <span id="st-${item.id}">En cola</span>
-        </div>
-      </div>`;
-  };
-  reader.readAsDataURL(item.file);
-  q.appendChild(div);
-}
-
-function setStatus(id, cls, txt) {
-  const d = document.getElementById(`dot-${id}`);
-  const t = document.getElementById(`st-${id}`);
-  if (d) d.className = `status-dot ${cls}`;
-  if (t) t.textContent = txt;
-}
-
-function removeItem(id) {
-  if (isProcessing) return;
-  queue = queue.filter(i => i.id !== id);
-  document.getElementById(`qi-${id}`)?.remove();
-  if (!queue.length) { document.getElementById('queueSection').style.display = 'none'; document.getElementById('generateBtn').disabled = true; }
-  updateStats();
-}
-
-function clearQueue() {
-  if (isProcessing) return;
-  queue = [];
-  document.getElementById('queue').innerHTML = '';
-  document.getElementById('queueSection').style.display = 'none';
-  document.getElementById('generateBtn').disabled = true;
-  updateStats();
-}
-
-// ── API helpers via proxy ──
-function getHeaders() {
-  return {
-    'Topview-Uid': document.getElementById('topviewUid').value.trim(),
-    'Authorization': `Bearer ${document.getElementById('apiKey').value.trim()}`,
-    'Content-Type': 'application/json',
-    'Accept': '*/*'
-  };
-}
-
-async function proxyFetch(path, options = {}, queryString = '') {
-  const url = `${PROXY}?path=${encodeURIComponent(path)}${queryString ? '&query=' + encodeURIComponent(queryString) : ''}`;
-  const res = await fetch(url, options);
-  return res;
-}
-
-async function getUploadCredential(fileType = 'png') {
-  const res = await proxyFetch('/v1/upload/credential', {
-    method: 'GET',
-    headers: {
-      'Topview-Uid': document.getElementById('topviewUid').value.trim(),
-      'Authorization': `Bearer ${document.getElementById('apiKey').value.trim()}`,
-      'Accept': '*/*'
+  // Sample average color above (per column)
+  const above = [];
+  for (let x = x1; x < x2; x++) {
+    let r=0, g=0, b=0, count=0;
+    for (let y = Math.max(0, y1-sampleRows); y < y1; y++) {
+      const idx = (y * w + x) * 4;
+      r += d[idx]; g += d[idx+1]; b += d[idx+2]; count++;
     }
-  }, `format=${fileType}`);
-  const data = await res.json();
-  if (data.code !== '200') throw new Error(`Credential error: ${data.message}`);
-  return data.result;
-}
-
-async function uploadToS3(uploadUrl, file) {
-  // S3 upload goes directly (S3 allows cross-origin PUT)
-  const res = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': file.type || 'image/png' },
-    body: file
-  });
-  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
-}
-
-async function uploadFile(file) {
-  const cred = await getUploadCredential("png");
-  console.log("FileId obtenido:", cred.fileId);
-  await uploadToS3(cred.uploadUrl, file);
-  return cred.fileId;
-}
-
-async function submitTask(productFileId, templateFileId, maskFileId) {
-  const res = await proxyFetch('/v3/product_anyShoot/product_model/task/submit', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      productImageFileId: productFileId,
-      templateImageFileId: templateFileId,
-      templateMaskFileId: maskFileId,
-      generatingCount: '1'
-    })
-  });
-  const data = await res.json();
-  if (data.code !== '200') throw new Error(`Submit error: ${data.message}`);
-  return data.result.taskId;
-}
-
-async function pollTask(taskId, maxWait = 300000) {
-  const start = Date.now();
-  while (Date.now() - start < maxWait) {
-    await new Promise(r => setTimeout(r, 5000));
-    const res = await proxyFetch(
-      '/v3/product_anyShoot/product_model/task/result',
-      {
-        method: 'GET',
-        headers: {
-          'Topview-Uid': document.getElementById('topviewUid').value.trim(),
-          'Authorization': `Bearer ${document.getElementById('apiKey').value.trim()}`,
-          'Accept': '*/*'
-        }
-      },
-      `taskId=${taskId}&needCloudFrontUrl=true`
-    );
-    const data = await res.json();
-    if (data.code !== '200') throw new Error(`Query error: ${data.message}`);
-    const status = data.result?.status;
-    if (status === 'success') {
-      const imgs = data.result?.anyfitImages;
-      if (imgs?.length) return imgs[0].url;
-      throw new Error('No images in result');
-    }
-    if (status === 'fail') throw new Error(`Task failed: ${data.result?.errorMsg}`);
+    above.push(count ? [r/count, g/count, b/count] : [230,230,230]);
   }
-  throw new Error('Timeout esperando resultado');
+
+  // Sample average color below (per column)
+  const below = [];
+  for (let x = x1; x < x2; x++) {
+    let r=0, g=0, b=0, count=0;
+    for (let y = y2; y < Math.min(imgData.height, y2+sampleRows); y++) {
+      const idx = (y * w + x) * 4;
+      r += d[idx]; g += d[idx+1]; b += d[idx+2]; count++;
+    }
+    below.push(count ? [r/count, g/count, b/count] : [230,230,230]);
+  }
+
+  // Interpolate
+  const h = y2 - y1;
+  for (let row = 0; row < h; row++) {
+    const t = h > 1 ? row / (h - 1) : 0;
+    for (let col = 0; col < (x2 - x1); col++) {
+      const x = x1 + col;
+      const y = y1 + row;
+      const idx = (y * w + x) * 4;
+      d[idx]   = Math.round(above[col][0] * (1-t) + below[col][0] * t);
+      d[idx+1] = Math.round(above[col][1] * (1-t) + below[col][1] * t);
+      d[idx+2] = Math.round(above[col][2] * (1-t) + below[col][2] * t);
+    }
+  }
+
+  return imgData;
 }
 
-
-// ── Split image ──
-function splitImage(file) {
+async function postProcessFront(imageUrl) {
   return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = async () => {
+      const canvas = document.getElementById('work-canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      // 1. Remover etiqueta interna del cuello
+      let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      imgData = removeArtifactInterpolate(imgData, 
+        POST.LABEL.y1, POST.LABEL.y2, POST.LABEL.x1, POST.LABEL.x2, POST.LABEL.sample);
+      ctx.putImageData(imgData, 0, 0);
+
+      // 2. Añadir grifa en manga
+      const grifaImg = new Image();
+      grifaImg.onload = () => {
+        ctx.drawImage(grifaImg, POST.GRIFA_FRONT.x, POST.GRIFA_FRONT.y);
+        resolve(canvas.toDataURL('image/jpeg', 0.95));
+      };
+      grifaImg.onerror = reject;
+      grifaImg.src = GRIFA_DATA_URL;
+    };
+    img.onerror = reject;
+    img.src = imageUrl;
+  });
+}
+
+async function postProcessBack(imageUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.getElementById('work-canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      // Remover grifa de la manga
+      let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      imgData = removeArtifactInterpolate(imgData,
+        POST.GRIFA_BACK.y1, POST.GRIFA_BACK.y2, POST.GRIFA_BACK.x1, POST.GRIFA_BACK.x2, POST.GRIFA_BACK.sample);
+      ctx.putImageData(imgData, 0, 0);
+
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+    img.onerror = reject;
+    img.src = imageUrl;
+  });
+}
+
+// ─── IMAGE SPLITTING ────────────────────────────────────────────────
+
+function splitImage(file) {
+  return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const w = img.naturalWidth, h = img.naturalHeight, half = Math.floor(w / 2);
-      const cf = document.createElement('canvas'); cf.width = half; cf.height = h;
-      cf.getContext('2d').drawImage(img, 0, 0, half, h, 0, 0, half, h);
-      const cb = document.createElement('canvas'); cb.width = w - half; cb.height = h;
-      cb.getContext('2d').drawImage(img, half, 0, w - half, h, 0, 0, w - half, h);
-      cf.toBlob(bF => cb.toBlob(bB => { URL.revokeObjectURL(url); resolve({ front: bF, back: bB }); }, 'image/png'), 'image/png');
+      const halfW = Math.floor(img.width / 2);
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      tempCanvas.width = halfW; tempCanvas.height = img.height;
+      tempCtx.drawImage(img, 0, 0);
+      const frontBlob = tempCanvas.toDataURL('image/jpeg', 0.95);
+      
+      tempCtx.clearRect(0, 0, halfW, img.height);
+      tempCtx.drawImage(img, -halfW, 0);
+      const backBlob = tempCanvas.toDataURL('image/jpeg', 0.95);
+      
+      URL.revokeObjectURL(url);
+      resolve({ front: frontBlob, back: backBlob, w: halfW, h: img.height });
     };
-    img.onerror = reject;
     img.src = url;
   });
 }
 
-// ── Main generation ──
-async function startGeneration() {
-  if (isProcessing || !queue.length) return;
-  isProcessing = true;
-  document.getElementById('generateBtn').disabled = true;
-  document.getElementById('progressBar').style.display = 'block';
-  document.getElementById('resultsSection').style.display = 'block';
-  document.getElementById('stats').style.display = 'flex';
-  results = [];
-  let done = 0, errors = 0;
-  const total = queue.length;
-  log(`Iniciando generación de ${total} remera(s)...`, 'info');
+// ─── TOPVIEW API ────────────────────────────────────────────────────
 
-  for (const item of queue) {
-    try {
-      log(`Procesando: ${item.name}`);
-      setStatus(item.id, 'uploading', 'Cortando...');
-      const { front, back } = await splitImage(item.file);
-
-      setStatus(item.id, 'uploading', 'Subiendo...');
-      log(`  → Subiendo frente...`);
-      const frontFileId = await uploadFile(new File([front], `front_${item.name}`, { type: 'image/png' }));
-      log(`  → Subiendo espalda...`);
-      const backFileId  = await uploadFile(new File([back],  `back_${item.name}`,  { type: 'image/png' }));
-
-      setStatus(item.id, 'processing', 'Generando...');
-      log(`  → Enviando tareas al modelo...`);
-      const [frontTaskId, backTaskId] = await Promise.all([
-        submitTask(frontFileId, CONFIG.TEMPLATE_FRONT_FILE_ID, CONFIG.MASK_FRONT_FILE_ID),
-        submitTask(backFileId,  CONFIG.TEMPLATE_BACK_FILE_ID,  CONFIG.MASK_BACK_FILE_ID)
-      ]);
-
-      log(`  → Esperando resultados (30-90s)...`);
-      const [frontUrl, backUrl] = await Promise.all([
-        pollTask(frontTaskId, 300000),
-        pollTask(backTaskId, 300000)
-      ]);
-
-      item.frontUrl = frontUrl;
-      item.backUrl  = backUrl;
-      item.status   = 'done';
-      results.push(item);
-      setStatus(item.id, 'done', '✓ Listo');
-      renderResult(item);
-      done++;
-      log(`  ✓ ${item.name} completado`, 'success');
-
-    } catch (err) {
-      item.status = 'error';
-      errors++;
-      setStatus(item.id, 'error', 'Error');
-      log(`  ✗ ${item.name}: ${err.message}`, 'error');
-    }
-
-    const pct = ((done + errors) / total) * 100;
-    document.getElementById('progressFill').style.width = `${pct}%`;
-    document.getElementById('statTotal').textContent  = total;
-    document.getElementById('statDone').textContent   = done;
-    document.getElementById('statError').textContent  = errors;
-  }
-
-  isProcessing = false;
-  document.getElementById('generateBtn').disabled = false;
-  log(`Terminado. ${done} exitosos, ${errors} errores.`, done > 0 ? 'success' : 'warn');
-  if (done > 0) document.getElementById('downloadAllBtn').classList.add('visible');
-}
-
-function updateStats() {
-  document.getElementById('statTotal').textContent = queue.length;
-}
-
-// ── Results ──
-function renderResult(item) {
-  const el = document.getElementById('results');
-  const base = item.name.replace(/\.[^.]+$/, '');
-  ['front', 'back'].forEach(side => {
-    const url = side === 'front' ? item.frontUrl : item.backUrl;
-    const label = side === 'front' ? 'FRENTE' : 'ESPALDA';
-    const badge = side === 'front' ? 'badge-front' : 'badge-back';
-    const suffix = side === 'front' ? 'frente' : 'espalda';
-    const card = document.createElement('div');
-    card.className = 'result-card';
-    card.innerHTML = `
-      <div class="result-header">
-        <span class="result-name">${base}</span>
-        <span class="result-badge ${badge}">${label}</span>
-      </div>
-      <img src="${url}" alt="${label} ${base}" crossorigin="anonymous">
-      <div class="result-actions">
-        <button class="btn-sm primary" onclick="downloadSingle('${url}','${base}_${suffix}.jpg')">Descargar</button>
-        <button class="btn-sm" onclick="window.open('${url}','_blank')">Ver</button>
-      </div>`;
-    el.appendChild(card);
+async function tvFetch(path, body) {
+  const res = await fetch(`/api/topview?path=${encodeURIComponent(path)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
-async function downloadSingle(url, filename) {
-  try {
-    const blob = await fetch(url).then(r => r.blob());
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-  } catch { window.open(url, '_blank'); }
+async function uploadImage(base64DataUrl) {
+  // Convert data URL to base64 string only
+  const base64 = base64DataUrl.split(',')[1];
+  const resp = await tvFetch('/api/open/v1/file/upload', { imageBase64: base64 });
+  if (resp.code !== 0) throw new Error('Upload failed: ' + JSON.stringify(resp));
+  return resp.data.fileId;
 }
 
-async function downloadAll() {
-  if (!results.length) return;
-  log('Preparando ZIP...', 'info');
-  const zip = new JSZip();
-  const folder = zip.folder('mockups_fingers_crossed');
-  for (const item of results) {
-    const base = item.name.replace(/\.[^.]+$/, '');
-    try {
-      const [fB, bB] = await Promise.all([fetch(item.frontUrl).then(r=>r.blob()), fetch(item.backUrl).then(r=>r.blob())]);
-      folder.file(`${base}_frente.jpg`, fB);
-      folder.file(`${base}_espalda.jpg`, bB);
-    } catch { log(`No se pudo incluir ${base} en ZIP`, 'warn'); }
+async function createModelTask(productFileId, templateFileId, maskFileId) {
+  const resp = await tvFetch('/api/open/v3/product/model/create', {
+    productFileId,
+    templateFileId,
+    maskFileId,
+  });
+  if (resp.code !== 0) throw new Error('Task creation failed: ' + JSON.stringify(resp));
+  return resp.data.taskId;
+}
+
+async function pollTask(taskId, maxAttempts = 60) {
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    const resp = await tvFetch('/api/open/v3/product/model/query', { taskId });
+    if (resp.code !== 0) throw new Error('Query failed: ' + JSON.stringify(resp));
+    const { status, resultUrl } = resp.data;
+    if (status === 'success') return resultUrl;
+    if (status === 'failed') throw new Error('Task failed: ' + JSON.stringify(resp));
   }
-  const blob = await zip.generateAsync({ type: 'blob' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mockups_fingers_crossed.zip'; a.click();
-  log('ZIP descargado', 'success');
+  throw new Error('Timeout');
 }
 
+// ─── MAIN FLOW ───────────────────────────────────────────────────────
+
+let currentFile = null;
+
+function setStatus(msg, isError = false) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = isError ? 'error' : '';
+}
+
+async function generate() {
+  if (!currentFile) return;
+  
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  document.getElementById('results').style.display = 'none';
+
+  try {
+    setStatus('Cortando imagen ●');
+    const { front: frontData, back: backData } = await splitImage(currentFile);
+
+    setStatus('Subiendo imágenes a TopView ●');
+    const [frontFileId, backFileId] = await Promise.all([
+      uploadImage(frontData),
+      uploadImage(backData)
+    ]);
+
+    setStatus('Generando mockup frente ●');
+    const frontTaskId = await createModelTask(frontFileId, TEMPLATE_FRONT_FILE_ID, MASK_FRONT_FILE_ID);
+    
+    setStatus('Generando mockup espalda ●');
+    const backTaskId = await createModelTask(backFileId, TEMPLATE_BACK_FILE_ID, MASK_BACK_FILE_ID);
+
+    setStatus('Procesando (puede tardar ~30s) ●');
+    const [frontUrl, backUrl] = await Promise.all([
+      pollTask(frontTaskId),
+      pollTask(backTaskId)
+    ]);
+
+    setStatus('Aplicando post-proceso ●');
+    
+    // Fetch images via proxy (CORS)
+    const [frontProcessed, backProcessed] = await Promise.all([
+      postProcessFront(`/api/topview?proxy=${encodeURIComponent(frontUrl)}`),
+      postProcessBack(`/api/topview?proxy=${encodeURIComponent(backUrl)}`)
+    ]);
+
+    // Display
+    const resultFront = document.getElementById('result-front');
+    const resultBack  = document.getElementById('result-back');
+    resultFront.src = frontProcessed;
+    resultBack.src  = backProcessed;
+
+    document.getElementById('dl-front').href = frontProcessed;
+    document.getElementById('dl-back').href  = backProcessed;
+    document.getElementById('results').style.display = 'grid';
+
+    setStatus('✓ Listo');
+  } catch (err) {
+    console.error(err);
+    setStatus('Error: ' + err.message, true);
+  }
+
+  btn.disabled = false;
+}
+
+// ─── UI EVENTS ──────────────────────────────────────────────────────
+
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  currentFile = file;
+
+  // Show split preview
+  const { front, back } = await splitImage(file);
+  document.getElementById('preview-front').src = front;
+  document.getElementById('preview-back').src = back;
+  const pr = document.getElementById('preview-row');
+  pr.style.display = 'flex';
+  document.getElementById('generate-btn').disabled = false;
+  setStatus('');
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  document.getElementById('file-input').files = e.dataTransfer.files;
+  document.getElementById('file-input').dispatchEvent(new Event('change'));
+});
+
+document.getElementById('generate-btn').addEventListener('click', generate);
 </script>
 </body>
 </html>
