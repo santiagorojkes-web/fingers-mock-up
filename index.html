@@ -145,10 +145,10 @@
 <script>
 
 const CONFIG = {
-  TEMPLATE_FRONT_FILE_ID: 'analyzed_video/task/product_anyfit/upload/8EOyIj2GRQ0Ksxi0qEc4/Frente_1779853470864.png',
-  TEMPLATE_BACK_FILE_ID: 'analyzed_video/task/product_anyfit/upload/8EOyIj2GRQ0Ksxi0qEc4/Espalda_1779853592681.png',
-  MASK_FRONT_FILE_ID: 'analyzed_video/task/product_anyfit/upload/8EOyIj2GRQ0Ksxi0qEc4/Frente_1779853703651.png',
-  MASK_BACK_FILE_ID: 'analyzed_video/task/product_anyfit/upload/8EOyIj2GRQ0Ksxi0qEc4/Espalda_1779853733047.png',
+  TEMPLATE_FRONT_FILE_ID: '7d7621e822644dd6ad2a997c4c71c609',
+  TEMPLATE_BACK_FILE_ID: '71eba7d9aa3348b89243f161cf8f3c24',
+  MASK_FRONT_FILE_ID: '38baaeb1c16f4ec1ab994b94b69820f0',
+  MASK_BACK_FILE_ID: '03b2ad6a11a44c7283e7cfac5e2733d5',
 };
 
 // Proxy URL — calls go through /api/topview to avoid CORS
@@ -279,6 +279,7 @@ async function uploadToS3(uploadUrl, file) {
 
 async function uploadFile(file) {
   const cred = await getUploadCredential("png");
+  console.log("FileId obtenido:", cred.fileId);
   await uploadToS3(cred.uploadUrl, file);
   return cred.fileId;
 }
