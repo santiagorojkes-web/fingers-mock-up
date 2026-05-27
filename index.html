@@ -253,7 +253,7 @@ async function proxyFetch(path, options = {}, queryString = '') {
   return res;
 }
 
-async function getUploadCredential(fileType = 'PNG') {
+async function getUploadCredential(fileType = 'png') {
   const res = await proxyFetch('/v1/upload/credential', {
     method: 'GET',
     headers: {
@@ -278,7 +278,7 @@ async function uploadToS3(uploadUrl, file) {
 }
 
 async function uploadFile(file) {
-  const cred = await getUploadCredential("PNG");
+  const cred = await getUploadCredential("png");
   await uploadToS3(cred.uploadUrl, file);
   return cred.fileId;
 }
