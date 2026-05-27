@@ -14,32 +14,30 @@ export default async function handler(req) {
   try {
     const url = new URL(req.url);
     const targetPath = url.searchParams.get('path');
-    const queryString = url.searchParams.get('query') || '';
+    const query = url.searchParams.get('query') || '';
 
     if (!targetPath) {
-      return new Response(JSON.stringify({ error: 'Missing path parameter' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ error: 'Missing path' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Build target URL — append query string directly
-    const targetUrl = `https://api.topview.ai${targetPath}${queryString ? '?' + queryString : ''}`;
+    // Build final TopView URL — decode query so it arrives unescaped
+    const decodedQuery = decodeURIComponent(query);
+    const targetUrl = `https://api.topview.ai${targetPath}${decodedQuery ? '?' + decodedQuery : ''}`;
 
-    // Forward only relevant headers
     const forwardHeaders = { 'Accept': '*/*' };
     const uid = req.headers.get('Topview-Uid');
     const auth = req.headers.get('Authorization');
-    const contentType = req.headers.get('Content-Type');
+    const ct = req.headers.get('Content-Type');
     if (uid) forwardHeaders['Topview-Uid'] = uid;
     if (auth) forwardHeaders['Authorization'] = auth;
-    // Only set Content-Type for non-GET requests with a body
-    if (contentType && req.method !== 'GET') forwardHeaders['Content-Type'] = contentType;
+    if (ct && req.method !== 'GET') forwardHeaders['Content-Type'] = ct;
 
     let body = undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      body = await req.arrayBuffer();
-      if (body.byteLength === 0) body = undefined;
+      const buf = await req.arrayBuffer();
+      if (buf.byteLength > 0) body = buf;
     }
 
     const response = await fetch(targetUrl, {
@@ -48,9 +46,9 @@ export default async function handler(req) {
       body,
     });
 
-    const responseData = await response.arrayBuffer();
+    const data = await response.arrayBuffer();
 
-    return new Response(responseData, {
+    return new Response(data, {
       status: response.status,
       headers: {
         ...corsHeaders,
@@ -58,8 +56,8 @@ export default async function handler(req) {
       }
     });
 
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
