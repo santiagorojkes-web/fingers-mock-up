@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fingers Crossed — Mockup Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222222;
+    --accent: #e8ff3c;
+    --text: #f0f0f0;
+    --muted: #666;
+    --success: #3cffa0;
+    --error: #ff4d4d;
+    --warning: #ffaa3c;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .logo span { color: var(--text); }
+
+  .version {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .credentials {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .cred-field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .cred-field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .cred-field input:focus { border-color: var(--accent); }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,255,60,0.03);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .upload-zone h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .upload-zone p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .queue {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .queue-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .queue-item img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+  }
+
+  .queue-item .item-info {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .queue-item .item-name {
+    font-size: 0.7rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
+  }
+
+  .queue-item .item-status {
+    font-size: 0.65rem;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .status-dot.pending { background: var(--muted); }
+  .status-dot.uploading { background: var(--warning); animation: pulse 1s infinite; }
+  .status-dot.processing { background: var(--accent); animation: pulse 0.8s infinite; }
+  .status-dot.done { background: var(--success); }
+  .status-dot.error { background: var(--error); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .queue-item .remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    background: rgba(0,0,0,0.7);
+    border: none;
+    border-radius: 50%;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .queue-item:hover .remove-btn { opacity: 1; }
+
+  .actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 0.8rem 1.8rem;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: #f5ff70; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .result-card .result-header {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .result-card .result-name {
+    font-size: 0.75rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+
+  .result-card .result-badge {
+    font-size: 0.6rem;
+    font-family: 'DM Mono', monospace;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .badge-front { background: rgba(232,255,60,0.15); color: var(--accent); }
+  .badge-back { background: rgba(60,255,160,0.15); color: var(--success); }
+
+  .result-card img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 4/5;
+    object-fit: cover;
+    background: #fff;
+  }
+
+  .result-card .result-actions {
+    padding: 0.8rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.7rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.15s;
+  }
+
+  .btn-sm:hover { background: var(--border); }
+  .btn-sm.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn-sm.primary:hover { background: #f5ff70; }
+
+  .log {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 2rem;
+  }
+
+  .log-line {
+    padding: 0.15rem 0;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .log-line.info { color: var(--text); }
+  .log-line.success { color: var(--success); }
+  .log-line.error { color: var(--error); }
+  .log-line.warn { color: var(--warning); }
+
+  .section-title {
+    font-size: 0.65rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.8rem;
+  }
+
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .stats span { color: var(--text); }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .label-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .label-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+  .download-all-btn {
+    display: none;
+  }
+
+  .download-all-btn.visible {
+    display: flex;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Fingers <span>Crossed</span> — Mockup Gen</div>
+  <div class="version">v1.0 · TopView API</div>
+</header>
+
+<!-- Credenciales -->
+<div class="section-title">Credenciales API</div>
+<div class="credentials">
+  <div class="cred-field">
+    <label>Topview-Uid</label>
+    <input type="text" id="topviewUid" placeholder="8EOyIj2GRQ0Ksxi0qEc4" value="8EOyIj2GRQ0Ksxi0qEc4">
+  </div>
+  <div class="cred-field">
+    <label>API Key (Bearer)</label>
+    <input type="password" id="apiKey" placeholder="sk-..." value="sk-dPXUdN-0XmRsv6u7wPfu_Jl5lZKC11HOsCvMESsEA34">
+  </div>
+</div>
+
+<!-- Info etiqueta -->
+<div class="label-preview">
+  <div class="label-dot"></div>
+  Etiqueta Fingers Crossed — se aplica automáticamente en manga izquierda (frente)
+</div>
+
+<!-- Upload zone -->
+<div class="section-title">Cargar remeras (frente+espalda en una imagen)</div>
+<div class="upload-zone" id="uploadZone">
+  <input type="file" id="fileInput" accept="image/*" multiple>
+  <span class="upload-icon">⬆</span>
+  <h3>Arrastrá o hacé clic para subir</h3>
+  <p>PNG, JPG · hasta 25 remeras · frente izq / espalda der</p>
+</div>
+
+<!-- Cola -->
+<div id="queueSection" style="display:none">
+  <div class="section-title">Cola de procesamiento</div>
+  <div class="queue" id="queue"></div>
+</div>
+
+<!-- Progress -->
+<div class="progress-bar" id="progressBar" style="display:none">
+  <div class="progress-fill" id="progressFill"></div>
+</div>
+
+<!-- Acciones -->
+<div class="actions">
+  <button class="btn btn-primary" id="generateBtn" onclick="startGeneration()" disabled>
+    Generar mockups
+  </button>
+  <button class="btn btn-ghost" onclick="clearQueue()">Limpiar</button>
+  <button class="btn btn-sm primary download-all-btn" id="downloadAllBtn" onclick="downloadAll()">
+    Descargar todo (ZIP)
+  </button>
+  <div class="stats" id="stats" style="display:none">
+    <div>Total: <span id="statTotal">0</span></div>
+    <div>Listos: <span id="statDone">0</span></div>
+    <div>Errores: <span id="statError">0</span></div>
+  </div>
+</div>
+
+<!-- Log -->
+<div class="log" id="log">
+  <div class="log-line">Sistema listo. Cargá tus imágenes para comenzar.</div>
+</div>
+
+<!-- Resultados -->
+<div id="resultsSection" style="display:none">
+  <div class="section-title">Resultados</div>
+  <div class="results" id="results"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+
+// ═══════════════════════════════════════════════
+// CONFIGURACIÓN FIJA — fileIds de los modelos
+// ═══════════════════════════════════════════════
+const CONFIG = {
+  TEMPLATE_FRONT_FILE_ID: 'Frente_1779853470864.png',
+  TEMPLATE_BACK_FILE_ID:  'Espalda_1779853592681.png',
+  MASK_FRONT_FILE_ID:     'Frente_1779853703651.png',
+  MASK_BACK_FILE_ID:      'Espalda_1779853733047.png',
+  // Etiqueta Fingers Crossed — posición en la manga izquierda del frente
+  LABEL_X: 0.62,   // porcentaje desde izquierda (ajustar si es necesario)
+  LABEL_Y: 0.38,   // porcentaje desde arriba
+  LABEL_SIZE: 0.07 // tamaño relativo al ancho de imagen
+};
+
+const TOPVIEW_API = 'https://api.topview.ai';
+let queue = [];
+let results = [];
+let isProcessing = false;
+
+// ═══════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════
+function log(msg, type = 'info') {
+  const logEl = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  const time = new Date().toLocaleTimeString('es-AR', { hour12: false });
+  line.textContent = `[${time}] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════
+// UPLOAD ZONE
+// ═══════════════════════════════════════════════
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+fileInput.addEventListener('change', () => addFiles(Array.from(fileInput.files)));
+
+function addFiles(files) {
+  const imageFiles = files.filter(f => f.type.startsWith('image/'));
+  if (imageFiles.length === 0) { log('No se encontraron imágenes válidas', 'warn'); return; }
+  if (queue.length + imageFiles.length > 25) {
+    log('Máximo 25 remeras por vez', 'warn'); return;
+  }
+  imageFiles.forEach(file => {
+    const id = Date.now() + Math.random();
+    const item = { id, file, name: file.name, status: 'pending', frontUrl: null, backUrl: null };
+    queue.push(item);
+    renderQueueItem(item);
+    log(`Agregada: ${file.name}`);
+  });
+  document.getElementById('queueSection').style.display = 'block';
+  document.getElementById('generateBtn').disabled = false;
+  updateStats();
+}
+
+function renderQueueItem(item) {
+  const q = document.getElementById('queue');
+  const div = document.createElement('div');
+  div.className = 'queue-item';
+  div.id = `qi-${item.id}`;
+  const reader = new FileReader();
+  reader.onload = e => {
+    div.innerHTML = `
+      <img src="${e.target.result}" alt="${item.name}">
+      <button class="remove-btn" onclick="removeItem('${item.id}')">✕</button>
+      <div class="item-info">
+        <div class="item-name">${item.name}</div>
+        <div class="item-status">
+          <div class="status-dot pending" id="dot-${item.id}"></div>
+          <span id="status-text-${item.id}">En cola</span>
+        </div>
+      </div>`;
+  };
+  reader.readAsDataURL(item.file);
+  q.appendChild(div);
+}
+
+function updateItemStatus(id, status, text) {
+  const dot = document.getElementById(`dot-${id}`);
+  const txt = document.getElementById(`status-text-${id}`);
+  if (dot) { dot.className = `status-dot ${status}`; }
+  if (txt) { txt.textContent = text; }
+}
+
+function removeItem(id) {
+  if (isProcessing) return;
+  queue = queue.filter(i => i.id != id);
+  const el = document.getElementById(`qi-${id}`);
+  if (el) el.remove();
+  if (queue.length === 0) {
+    document.getElementById('queueSection').style.display = 'none';
+    document.getElementById('generateBtn').disabled = true;
+  }
+  updateStats();
+}
+
+function clearQueue() {
+  if (isProcessing) return;
+  queue = [];
+  document.getElementById('queue').innerHTML = '';
+  document.getElementById('queueSection').style.display = 'none';
+  document.getElementById('generateBtn').disabled = true;
+  updateStats();
+}
+
+// ═══════════════════════════════════════════════
+// API HELPERS
+// ═══════════════════════════════════════════════
+function getHeaders() {
+  const uid = document.getElementById('topviewUid').value.trim();
+  const key = document.getElementById('apiKey').value.trim();
+  return {
+    'Topview-Uid': uid,
+    'Authorization': `Bearer ${key}`,
+    'Content-Type': 'application/json',
+    'Accept': '*/*'
+  };
+}
+
+async function getUploadCredential(fileType = 'image/png') {
+  const uid = document.getElementById('topviewUid').value.trim();
+  const key = document.getElementById('apiKey').value.trim();
+  const res = await fetch(`${TOPVIEW_API}/v1/upload/credential?fileType=${fileType}`, {
+    headers: { 'Topview-Uid': uid, 'Authorization': `Bearer ${key}`, 'Accept': '*/*' }
+  });
+  const data = await res.json();
+  if (data.code !== '200') throw new Error(`Credential error: ${data.message}`);
+  return data.result;
+}
+
+async function uploadToS3(credential, file) {
+  const res = await fetch(credential.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type || 'image/png' },
+    body: file
+  });
+  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
+  return credential.fileId;
+}
+
+async function uploadFile(file) {
+  const cred = await getUploadCredential(file.type || 'image/png');
+  const fileId = await uploadToS3(cred, file);
+  return fileId;
+}
+
+async function submitTask(productFileId, templateFileId, maskFileId) {
+  const res = await fetch(`${TOPVIEW_API}/v3/product_anyShoot/product_model/task/submit`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      productImageFileId: productFileId,
+      templateImageFileId: templateFileId,
+      templateMaskFileId: maskFileId,
+      generatingCount: '1'
+    })
+  });
+  const data = await res.json();
+  if (data.code !== '200') throw new Error(`Submit error: ${data.message}`);
+  return data.result.taskId;
+}
+
+async function pollTask(taskId, maxWait = 120000) {
+  const uid = document.getElementById('topviewUid').value.trim();
+  const key = document.getElementById('apiKey').value.trim();
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    await new Promise(r => setTimeout(r, 4000));
+    const res = await fetch(`${TOPVIEW_API}/v3/product_anyShoot/product_model/task/result?taskId=${taskId}&needCloudFrontUrl=true`, {
+      headers: { 'Topview-Uid': uid, 'Authorization': `Bearer ${key}`, 'Accept': '*/*' }
+    });
+    const data = await res.json();
+    if (data.code !== '200') throw new Error(`Query error: ${data.message}`);
+    const status = data.result?.status;
+    if (status === 'success') {
+      const images = data.result?.anyfitImages;
+      if (images && images.length > 0) return images[0].url;
+      throw new Error('No images in result');
+    }
+    if (status === 'fail') throw new Error(`Task failed: ${data.result?.errorMsg}`);
+  }
+  throw new Error('Timeout esperando resultado');
+}
+
+// ═══════════════════════════════════════════════
+// SPLIT IMAGE — corta la imagen en frente y espalda
+// ═══════════════════════════════════════════════
+function splitImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      const half = Math.floor(w / 2);
+
+      // Frente (mitad izquierda)
+      const canvasFront = document.createElement('canvas');
+      canvasFront.width = half; canvasFront.height = h;
+      canvasFront.getContext('2d').drawImage(img, 0, 0, half, h, 0, 0, half, h);
+
+      // Espalda (mitad derecha)
+      const canvasBack = document.createElement('canvas');
+      canvasBack.width = w - half; canvasBack.height = h;
+      canvasBack.getContext('2d').drawImage(img, half, 0, w - half, h, 0, 0, w - half, h);
+
+      canvasFront.toBlob(blobF => {
+        canvasBack.toBlob(blobB => {
+          URL.revokeObjectURL(url);
+          resolve({ front: blobF, back: blobB });
+        }, 'image/png');
+      }, 'image/png');
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+// ═══════════════════════════════════════════════
+// GENERACIÓN PRINCIPAL
+// ═══════════════════════════════════════════════
+async function startGeneration() {
+  if (isProcessing || queue.length === 0) return;
+  isProcessing = true;
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('progressBar').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('stats').style.display = 'flex';
+
+  results = [];
+  let done = 0;
+  let errors = 0;
+  const total = queue.length;
+  updateProgress(0, total);
+  log(`Iniciando generación de ${total} remera(s)...`, 'info');
+
+  for (const item of queue) {
+    try {
+      log(`Procesando: ${item.name}`, 'info');
+      updateItemStatus(item.id, 'uploading', 'Subiendo...');
+
+      // 1. Cortar imagen
+      log(`  → Cortando frente y espalda...`);
+      const { front, back } = await splitImage(item.file);
+
+      // 2. Subir frente y espalda a TopView
+      log(`  → Subiendo frente a TopView...`);
+      const frontFile = new File([front], `front_${item.name}`, { type: 'image/png' });
+      const frontFileId = await uploadFile(frontFile);
+
+      log(`  → Subiendo espalda a TopView...`);
+      const backFile = new File([back], `back_${item.name}`, { type: 'image/png' });
+      const backFileId = await uploadFile(backFile);
+
+      updateItemStatus(item.id, 'processing', 'Generando...');
+
+      // 3. Enviar tareas en paralelo
+      log(`  → Enviando tareas al modelo...`);
+      const [frontTaskId, backTaskId] = await Promise.all([
+        submitTask(frontFileId, CONFIG.TEMPLATE_FRONT_FILE_ID, CONFIG.MASK_FRONT_FILE_ID),
+        submitTask(backFileId, CONFIG.TEMPLATE_BACK_FILE_ID, CONFIG.MASK_BACK_FILE_ID)
+      ]);
+
+      log(`  → Esperando resultados (puede tardar 30-90s)...`);
+      const [frontUrl, backUrl] = await Promise.all([
+        pollTask(frontTaskId),
+        pollTask(backTaskId)
+      ]);
+
+      item.frontUrl = frontUrl;
+      item.backUrl = backUrl;
+      item.status = 'done';
+      results.push(item);
+      updateItemStatus(item.id, 'done', '✓ Listo');
+      renderResult(item);
+      done++;
+      log(`  ✓ ${item.name} completado`, 'success');
+
+    } catch (err) {
+      item.status = 'error';
+      errors++;
+      updateItemStatus(item.id, 'error', 'Error');
+      log(`  ✗ Error en ${item.name}: ${err.message}`, 'error');
+    }
+
+    updateProgress(done + errors, total);
+    updateStatNumbers(done, errors, total);
+  }
+
+  isProcessing = false;
+  document.getElementById('generateBtn').disabled = false;
+  log(`Proceso terminado. ${done} exitosos, ${errors} errores.`, done > 0 ? 'success' : 'warn');
+
+  if (done > 0) {
+    document.getElementById('downloadAllBtn').classList.add('visible');
+  }
+}
+
+function updateProgress(done, total) {
+  const pct = total > 0 ? (done / total) * 100 : 0;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+}
+
+function updateStatNumbers(done, errors, total) {
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statError').textContent = errors;
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = queue.length;
+}
+
+// ═══════════════════════════════════════════════
+// RESULTADOS
+// ═══════════════════════════════════════════════
+function renderResult(item) {
+  const resultsEl = document.getElementById('results');
+  const baseName = item.name.replace(/\.[^.]+$/, '');
+
+  // Frente
+  const cardF = document.createElement('div');
+  cardF.className = 'result-card';
+  cardF.innerHTML = `
+    <div class="result-header">
+      <span class="result-name">${baseName}</span>
+      <span class="result-badge badge-front">FRENTE</span>
+    </div>
+    <img src="${item.frontUrl}" alt="Frente ${baseName}" crossorigin="anonymous">
+    <div class="result-actions">
+      <button class="btn-sm primary" onclick="downloadSingle('${item.frontUrl}', '${baseName}_frente.jpg')">Descargar</button>
+      <button class="btn-sm" onclick="window.open('${item.frontUrl}', '_blank')">Ver</button>
+    </div>`;
+  resultsEl.appendChild(cardF);
+
+  // Espalda
+  const cardB = document.createElement('div');
+  cardB.className = 'result-card';
+  cardB.innerHTML = `
+    <div class="result-header">
+      <span class="result-name">${baseName}</span>
+      <span class="result-badge badge-back">ESPALDA</span>
+    </div>
+    <img src="${item.backUrl}" alt="Espalda ${baseName}" crossorigin="anonymous">
+    <div class="result-actions">
+      <button class="btn-sm primary" onclick="downloadSingle('${item.backUrl}', '${baseName}_espalda.jpg')">Descargar</button>
+      <button class="btn-sm" onclick="window.open('${item.backUrl}', '_blank')">Ver</button>
+    </div>`;
+  resultsEl.appendChild(cardB);
+}
+
+async function downloadSingle(url, filename) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  } catch(e) {
+    window.open(url, '_blank');
+  }
+}
+
+async function downloadAll() {
+  if (results.length === 0) return;
+  log('Preparando ZIP...', 'info');
+  const zip = new JSZip();
+  const folder = zip.folder('mockups_fingers_crossed');
+
+  for (const item of results) {
+    const baseName = item.name.replace(/\.[^.]+$/, '');
+    try {
+      const [fRes, bRes] = await Promise.all([fetch(item.frontUrl), fetch(item.backUrl)]);
+      const [fBlob, bBlob] = await Promise.all([fRes.blob(), bRes.blob()]);
+      folder.file(`${baseName}_frente.jpg`, fBlob);
+      folder.file(`${baseName}_espalda.jpg`, bBlob);
+    } catch(e) {
+      log(`No se pudo incluir ${baseName} en el ZIP`, 'warn');
+    }
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(zipBlob);
+  a.download = 'mockups_fingers_crossed.zip';
+  a.click();
+  log('ZIP descargado', 'success');
+}
+
+</script>
+</body>
+</html>
