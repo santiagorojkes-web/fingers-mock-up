@@ -11,34 +11,24 @@ body{background:var(--bg);color:var(--fg);font-family:'Helvetica Neue',Arial,san
 header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:40px}
 .logo{font-size:13px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
 .subtitle{font-size:11px;color:var(--gray);letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
-
 .upload-area{max-width:640px;margin:0 auto 32px;border:1px dashed #2a2a2a;border-radius:4px;padding:48px;text-align:center}
 .upload-area.active{border-color:var(--accent);background:rgba(200,255,0,.03)}
 .upload-icon{font-size:32px;opacity:.3;margin-bottom:12px}
 .upload-title{font-size:13px;color:var(--gray);margin-bottom:8px}
 .upload-hint{font-size:11px;color:#404040}
-.upload-btn{
-  display:inline-block;margin-top:16px;padding:10px 28px;
-  background:var(--accent);color:#000;border:none;
-  font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
-  cursor:pointer;border-radius:2px;
-}
+.upload-btn{display:inline-block;margin-top:16px;padding:10px 28px;background:var(--accent);color:#000;border:none;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px}
 .upload-btn:hover{background:#d4ff33}
 #file-input{display:none}
-
 #preview-row{display:none;gap:16px;max-width:640px;margin:0 auto 28px}
 .preview-box{flex:1}
 .preview-img{aspect-ratio:3/4;background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .preview-img img{width:100%;height:100%;object-fit:contain}
 .preview-lbl{font-size:10px;color:var(--gray);text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
-
 .gen-btn{display:block;margin:0 auto 32px;background:var(--accent);color:#000;border:none;padding:14px 56px;font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px}
 .gen-btn:disabled{opacity:.3;cursor:not-allowed}
-
 #status{text-align:center;font-size:12px;color:var(--gray);min-height:20px;margin-bottom:32px;padding:0 20px}
 #status.err{color:#ff5555}
-
-#results{display:none;max-width:800px;margin:0 auto;gap:32px}
+#results{display:none;flex-direction:column;gap:32px;max-width:800px;margin:0 auto}
 .result-card{background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden}
 .result-card img{width:100%;display:block}
 .result-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
@@ -48,7 +38,6 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
 </style>
 </head>
 <body>
-
 <header>
   <div class="logo">Fingers Crossed</div>
   <div class="subtitle">Mockup Generator</div>
@@ -63,196 +52,132 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
 </div>
 
 <div id="preview-row" style="display:none;flex-direction:row;gap:16px;max-width:640px;margin:0 auto 28px">
-  <div class="preview-box">
-    <div class="preview-img"><img id="preview-front" src="" alt="Frente"></div>
-    <div class="preview-lbl">Frente</div>
-  </div>
-  <div class="preview-box">
-    <div class="preview-img"><img id="preview-back" src="" alt="Espalda"></div>
-    <div class="preview-lbl">Espalda</div>
-  </div>
+  <div class="preview-box"><div class="preview-img"><img id="preview-front" src="" alt="Frente"></div><div class="preview-lbl">Frente</div></div>
+  <div class="preview-box"><div class="preview-img"><img id="preview-back" src="" alt="Espalda"></div><div class="preview-lbl">Espalda</div></div>
 </div>
 
 <button class="gen-btn" id="gen-btn" disabled onclick="generate()">Generar Mockup</button>
 <div id="status"></div>
 
 <div id="results" style="display:none;flex-direction:column;gap:32px;max-width:800px;margin:0 auto">
-  <div class="result-card">
-    <img id="result-front" src="" alt="Frente">
-    <div class="result-footer">
-      <span class="result-title">Frente</span>
-      <a class="dl-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a>
-    </div>
+  <div class="result-card"><img id="result-front" src="" alt="Frente">
+    <div class="result-footer"><span class="result-title">Frente</span><a class="dl-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a></div>
   </div>
-  <div class="result-card">
-    <img id="result-back" src="" alt="Espalda">
-    <div class="result-footer">
-      <span class="result-title">Espalda</span>
-      <a class="dl-btn" id="dl-back" download="mockup_espalda.jpg">Descargar</a>
-    </div>
+  <div class="result-card"><img id="result-back" src="" alt="Espalda">
+    <div class="result-footer"><span class="result-title">Espalda</span><a class="dl-btn" id="dl-back" download="mockup_espalda.jpg">Descargar</a></div>
   </div>
 </div>
-
-</div>
-
-<canvas id="work-canvas"
-<div id="calibrate-box" style="display:none;max-width:800px;margin:24px auto;padding:20px;border:1px solid #2a2a2a;border-radius:4px;background:#111">
-  <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#c8ff00;margin-bottom:12px">⊕ Calibrar posición de grifa</div>
-  <div style="font-size:12px;color:#666;margin-bottom:16px">Hacé click en la imagen de frente donde debería aparecer la grifa</div>
-  <div style="position:relative;display:inline-block;max-width:100%;border:1px solid #222;border-radius:4px;overflow:hidden">
-    <img id="calibrate-img" style="width:100%;display:block;cursor:crosshair">
-    <div id="calibrate-marker" style="display:none;position:absolute;width:65px;height:78px;border:2px solid #c8ff00;border-radius:3px;pointer-events:none;transform:translate(-50%,-50%)">
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
-        <img id="calibrate-grifa-preview" style="width:100%;height:100%;object-fit:contain">
-      </div>
-    </div>
-  </div>
-  <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-    <span id="calibrate-coords" style="font-size:11px;color:#444;font-family:monospace">Click para marcar posición</span>
-    <button onclick="applyCalibration()" style="background:#c8ff00;color:#000;border:none;padding:7px 20px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px">Guardar posición</button>
-    <button onclick="document.getElementById('calibrate-box').style.display='none'" style="background:transparent;border:1px solid #333;color:#666;padding:7px 16px;font-size:11px;cursor:pointer;border-radius:2px">Cancelar</button>
-  </div>
-</div>
-
 <canvas id="work-canvas" style="display:none"></canvas>
 
 <script>
-// ─── Config ──────────────────────────────────────────────────────
-const GRIFA    = 'data:image/png;base64,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';
-const TMPL_F   = '7d7621e822644dd6ad2a997c4c71c609';
-const TMPL_B   = '6a4e9340ec364a60a75bf22cd13604ae';
-const MASK_F   = '38baaeb1c16f4ec1ab994b94b69820f0';
-const MASK_B   = '03b2ad6a11a44c7283e7cfac5e2733d5';
-const MAX_DIM  = 1400;
-// Post-proceso coords (imagen centrada 1536x2730)
-const LABEL    = {y1:1004,y2:1040,x1:1083,x2:1235};
-const GRF      = {x:1046,y:1462};   // manga DERECHA (viewer right)
-const GRF_BAK  = {y1:1453,y2:1535,x1:383,x2:450};
+const GRIFA   = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEEAAABOCAYAAAB/oXuQAAACiUlEQVR4nOWcwXLDIAxEpUz+/5fdkx1KsAGhXcnOzuTQTorQYwUYM9Vt2zYhSVVFRIQYckgvRhBVPQDsP2cSHMJZwplAvFENZ0qyJ3cn1NbvfTeDXCFYksoAwqUcMiSyoiUnzFi/106kzBCiO+6paQheo99qN0rDEFDJ1zEiNAThSdZv6RICY/RbMdlqLpFPH/laX07IAIDdhwNChPWvxOzLO1PiUaKcJ1jFGqDUEFhKD4Hhhle2876W0CBeIvkOPtlKXw67kG44IDDdsG3b8cmg2zhBBOeGfxCyjAxbX05AgthLoBzR2XgIN9DKoUy2BjErbxBNCAg31B1fBeEp6sToCcIT4CkE1NzQAhGtkCXSC4SXGy4hsDdQFnmA6DqBVRbIWD2F7RjPJkULiFU3DEFAjVAJYj/jjFg2dfTOErpzdTcs8czzyszFLQ8QZThV7XZ8NqYFxNScwNhJMmLWCn2U3hMs54PVydLi1umbKpatbq8EWvMBc7kMP1RpQT373ahmB8kEYWWURpL2cMIMCLMTVkbG+vSIKpHwchDBzQGjoJcgeLghw8FK6KGKyOfckRmz1jIE9pMf4gHL5UbrzEQ3ctLMBhsyMUa8fboaJDcI6K0tUimWSJbO4LtCuIMbWnHdnYAEgdpXhJfDaGKeyddtQSB4ruWMXWW4E0oxD13LtmEQot8qzcSCOiHDe8YRpSqHCKkqHsId3PDzThAhQcjqhv1BLuTOUrTqp9ifK4fWYFAhRLrh6gwD9q8DsmgEPL0cMl4BCjteQ7c/E+NR5WCFG3pnKUt7t3eCB8wUlzSsf+vlpltulrxLKRzCTEKolzbhEET6INBvrFJAuNLjb6+Val3mYu0u/wB4jkfNNg4AWwAAAABJRU5ErkJggg==';
+const TMPL_F  = '7d7621e822644dd6ad2a997c4c71c609';
+const TMPL_B  = '6a4e9340ec364a60a75bf22cd13604ae';
+const MASK_F  = '38baaeb1c16f4ec1ab994b94b69820f0';
+const MASK_B  = '03b2ad6a11a44c7283e7cfac5e2733d5';
+const MAX_DIM = 1400;
+const LABEL   = {y1:1004,y2:1040,x1:1083,x2:1235};
 
-let frontDataUrl = null, backDataUrl = null;
+let frontDataUrl=null, backDataUrl=null;
+function st(msg,err=false){const el=document.getElementById('status');el.textContent=msg;el.className=err?'err':'';}
 
-// ─── Status helpers ───────────────────────────────────────────────
-function st(msg,err=false){
-  const el=document.getElementById('status');
-  el.textContent=msg; el.className=err?'err':'';
-}
-
-// ─── Resize canvas ────────────────────────────────────────────────
 function resize(src){
   const w=src.width,h=src.height;
-  if(w<=MAX_DIM&&h<=MAX_DIM) return src;
+  if(w<=MAX_DIM&&h<=MAX_DIM)return src;
   const s=MAX_DIM/Math.max(w,h);
   const c=document.createElement('canvas');
-  c.width=Math.round(w*s); c.height=Math.round(h*s);
+  c.width=Math.round(w*s);c.height=Math.round(h*s);
   c.getContext('2d').drawImage(src,0,0,c.width,c.height);
   return c;
 }
 
-// ─── Blanquear remera gris → blanca ──────────────────────────────
 function whiten(canvas){
   const ctx=canvas.getContext('2d');
   const id=ctx.getImageData(0,0,canvas.width,canvas.height);
   const d=id.data;
   let mn=255,mx=0;
-  for(let i=0;i<d.length;i+=4){
-    if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
-      const v=(d[i]+d[i+1]+d[i+2])/3;
-      if(v<mn)mn=v; if(v>mx)mx=v;
-    }
+  for(let i=0;i<d.length;i+=4)if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
+    const v=(d[i]+d[i+1]+d[i+2])/3;
+    if(v<mn)mn=v;if(v>mx)mx=v;
   }
-  if(mx<=mn) return;
+  if(mx<=mn)return;
   const range=mx-mn;
-  for(let i=0;i<d.length;i+=4){
-    if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
-      d[i]  =Math.min(255,Math.round(200+(d[i]  -mn)/range*55));
-      d[i+1]=Math.min(255,Math.round(200+(d[i+1]-mn)/range*55));
-      d[i+2]=Math.min(255,Math.round(200+(d[i+2]-mn)/range*55));
-    }
+  for(let i=0;i<d.length;i+=4)if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
+    d[i]  =Math.min(255,Math.round(200+(d[i]  -mn)/range*55));
+    d[i+1]=Math.min(255,Math.round(200+(d[i+1]-mn)/range*55));
+    d[i+2]=Math.min(255,Math.round(200+(d[i+2]-mn)/range*55));
   }
   ctx.putImageData(id,0,0);
 }
 
-// ─── PSD parsing ─────────────────────────────────────────────────
 function findL(list,name){return(list||[]).find(l=>l.name===name)||null;}
-function findN(root,...path){
-  let cur=root;
-  for(const s of path){cur=findL(cur.children,s);if(!cur)return null;}
-  return cur;
-}
-
+function findN(root,...path){let cur=root;for(const s of path){cur=findL(cur.children,s);if(!cur)return null;}return cur;}
 function drawStamp(ctx,layer){
   if(!layer)return;
   if(layer.canvas)ctx.drawImage(layer.canvas,layer.left||0,layer.top||0);
   (layer.children||[]).forEach(c=>drawStamp(ctx,c));
 }
-
-function buildShirtCanvas(W,H,mainObj,stamp){
-  const c=document.createElement('canvas');
-  c.width=W; c.height=H;
+function buildShirt(W,H,mainObj,stamp){
+  const c=document.createElement('canvas');c.width=W;c.height=H;
   const ctx=c.getContext('2d');
-  if(mainObj?.canvas) ctx.drawImage(mainObj.canvas,mainObj.left||0,mainObj.top||0);
+  if(mainObj?.canvas)ctx.drawImage(mainObj.canvas,mainObj.left||0,mainObj.top||0);
   drawStamp(ctx,stamp);
   const crop=document.createElement('canvas');
   const {left:l=0,top:t=0,right:r=W,bottom:b=H}=mainObj||{};
-  crop.width=r-l; crop.height=b-t;
+  crop.width=r-l;crop.height=b-t;
   crop.getContext('2d').drawImage(c,-l,-t);
   whiten(crop);
   return resize(crop);
 }
-
 async function readPSD(file){
   st('Leyendo PSD…');
   const buf=await file.arrayBuffer();
   const psd=agPsd.readPsd(buf,{skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
-  const W=psd.width, H=psd.height;
-  const lMain =findN(psd,'Working Process','Left Shirt','Objects','Main Object');
-  const rMain =findN(psd,'Working Process','Right Shirt','Objects','Main Object');
-  const eFront=findL(psd.children,'Estampa Frontal');
-  const eBack =findL(psd.children,'Estampa Espalda');
-  if(!lMain||!rMain) throw new Error('No se encontraron layers Left/Right Shirt');
-  const fC=buildShirtCanvas(W,H,lMain,eFront);
-  const bC=buildShirtCanvas(W,H,rMain,eBack);
+  const W=psd.width,H=psd.height;
+  const lM=findN(psd,'Working Process','Left Shirt','Objects','Main Object');
+  const rM=findN(psd,'Working Process','Right Shirt','Objects','Main Object');
+  const eF=findL(psd.children,'Estampa Frontal');
+  const eB=findL(psd.children,'Estampa Espalda');
+  if(!lM||!rM)throw new Error('No se encontraron layers Left/Right Shirt');
+  const fC=buildShirt(W,H,lM,eF);
+  const bC=buildShirt(W,H,rM,eB);
   const kb=c=>Math.round(c.toDataURL('image/jpeg',.92).length*.75/1024);
   st(`✓ PSD leído — frente ~${kb(fC)}KB · espalda ~${kb(bC)}KB`);
-  return {
-    front: fC.toDataURL('image/jpeg',.92),
-    back:  bC.toDataURL('image/jpeg',.92),
-  };
+  return{front:fC.toDataURL('image/jpeg',.92),back:bC.toDataURL('image/jpeg',.92)};
 }
 
-// ─── Centering ───────────────────────────────────────────────────
+// Centering
 function detectOff(d,w,h){
-  // Solo esquinas SUPERIORES: las inferiores tienen pantalón oscuro que corrompe el valor
   const avg=(x,y)=>{const i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;};
-  const fondo=(avg(20,20)+avg(w-20,20))/2;
+  const fondo=(avg(20,20)+avg(w-20,20))/2;  // solo esquinas superiores
   const centers=[];
   for(let y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15){
     let l=-1,r=-1;
     for(let x=0;x<w;x++){const i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){l=x;break;}}
     for(let x=w-1;x>=0;x--){const i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){r=x;break;}}
-    if(l>0&&r>0&&r-l>w*.25) centers.push((l+r)/2);
+    if(l>0&&r>0&&r-l>w*.25)centers.push((l+r)/2);
   }
-  if(!centers.length) return 0;
+  if(!centers.length)return 0;
   const sorted=centers.slice().sort((a,b)=>a-b);
   const med=sorted[Math.floor(sorted.length/2)];
-  console.log('offset detected:',Math.round(med-w/2),'px  (centers sample:',sorted.slice(0,5).map(v=>Math.round(v)).join(','),')');
-  return Math.round(med-w/2);
+  let off=Math.round(med-w/2);
+  off=Math.max(-180,Math.min(180,off));
+  if(Math.abs(off)<15)off=0;
+  console.log('centering offset:',off,'px');
+  return off;
 }
-
 function center(canvas,ctx,off){
-  off = Math.max(-200, Math.min(200, off));  // cap: max 200px para no cortar
-  if(Math.abs(off)<8) return;
+  if(!off)return;
   const tmp=document.createElement('canvas');
-  tmp.width=canvas.width; tmp.height=canvas.height;
+  tmp.width=canvas.width;tmp.height=canvas.height;
   tmp.getContext('2d').drawImage(canvas,0,0);
-  // fill background
   const bg=ctx.getImageData(20,20,1,1).data;
   ctx.fillStyle=`rgb(${bg[0]},${bg[1]},${bg[2]})`;
   ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(tmp,-off,0);
 }
 
-// ─── Remove artifact (interpolate above/below) ───────────────────
+// Remove artifact (interpolate)
 function removeArt(id,y1,y2,x1,x2,rows=15){
   const {data:d,width:w,height:h}=id;
   const above=[],below=[];
@@ -277,14 +202,14 @@ function removeArt(id,y1,y2,x1,x2,rows=15){
   return id;
 }
 
-// ─── Post-process ────────────────────────────────────────────────
+// Post-process
 async function postProcess(imgUrl,isFront){
   return new Promise((resolve,reject)=>{
-    const img=new Image(); img.crossOrigin='anonymous';
-    img.onerror=()=>reject(new Error('No se pudo cargar imagen resultado'));
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onerror=()=>reject(new Error('No se pudo cargar imagen'));
     img.onload=()=>{
       const c=document.getElementById('work-canvas');
-      c.width=img.width; c.height=img.height;
+      c.width=img.width;c.height=img.height;
       const ctx=c.getContext('2d');
       ctx.drawImage(img,0,0);
 
@@ -298,31 +223,30 @@ async function postProcess(imgUrl,isFront){
         let id=ctx.getImageData(0,0,c.width,c.height);
         id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);
         ctx.putImageData(id,0,0);
-        // 3. Detectar borde derecho de manga en imagen CENTRADA
+
+        // 3. Detectar borde derecho de manga (CENTRADA) → colocar grifa
         const centId=ctx.getImageData(0,0,c.width,c.height);
         const cFondo=(centId.data[20*4]+centId.data[20*4+1]+centId.data[20*4+2])/3*0.5
                     +(centId.data[(20*c.width+(c.width-20))*4]+centId.data[(20*c.width+(c.width-20))*4+1]+centId.data[(20*c.width+(c.width-20))*4+2])/3*0.5;
-        const slvEdges=[];
+        const edges=[];
         const yA=Math.floor(c.height*.51),yB=Math.floor(c.height*.57);
         for(let sy=yA;sy<yB;sy+=4){
           for(let sx=c.width-1;sx>=c.width/2;sx--){
             const si=(sy*c.width+sx)*4;
-            if(Math.abs((centId.data[si]+centId.data[si+1]+centId.data[si+2])/3-cFondo)>18){slvEdges.push(sx);break;}
+            if(Math.abs((centId.data[si]+centId.data[si+1]+centId.data[si+2])/3-cFondo)>18){edges.push(sx);break;}
           }
         }
-        const slvEdge=slvEdges.length?slvEdges.sort((a,b)=>a-b)[Math.floor(slvEdges.length/2)]:c.width-100;
-        const gX=slvEdge-80;  // 80px adentro del borde derecho de la manga
-        const gY=Math.floor(c.height*.535);
-        console.log('Sleeve right edge (centered):',slvEdge,'grifa at x:',gX,'y:',gY);
-        // 4. Agregar grifa (manga izquierda del modelo = derecha del viewer)
+        const slvEdge=edges.length?edges.slice().sort((a,b)=>a-b)[Math.floor(edges.length/2)]:c.width-80;
+        // Grifa: borde derecho pegado al borde de la manga (65px de ancho)
+        const gX=slvEdge-65;
+        const gY=Math.floor(c.height*.555);
+        console.log('Sleeve edge:',slvEdge,'grifa at x:',gX,'y:',gY);
+
         const g=new Image();
-        g.onload=()=>{
-          ctx.drawImage(g,gX,gY);
-          resolve(c.toDataURL('image/jpeg',.95));
-        };
+        g.onload=()=>{ctx.drawImage(g,gX,gY);resolve(c.toDataURL('image/jpeg',.95));};
         g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95));
         g.src=GRIFA;
-      } else {
+      }else{
         resolve(c.toDataURL('image/jpeg',.95));
       }
     };
@@ -330,131 +254,107 @@ async function postProcess(imgUrl,isFront){
   });
 }
 
-// ─── API calls ────────────────────────────────────────────────────
+// API
 async function apiPost(q,body){
   const res=await fetch(`/api/topview?${q}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const txt=await res.text();
-  try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
+  const txt=await res.text();try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
 }
 async function apiGet(q){
   const res=await fetch(`/api/topview?${q}`);
-  const txt=await res.text();
-  try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
+  const txt=await res.text();try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
 }
-
 async function upload(b64){
   const d=await apiPost('upload=1',{imageBase64:b64});
-  if(!d.ok) throw new Error('Upload: '+(d.error||JSON.stringify(d)));
+  if(!d.ok)throw new Error('Upload: '+(d.error||JSON.stringify(d)));
   return d.fileId;
 }
-async function submit(productFileId,tmplId,maskId){
-  const d=await apiPost('submit=1',{productImageFileId:productFileId,templateImageFileId:tmplId,templateMaskFileId:maskId});
-  if(!d.ok) throw new Error('Submit: '+(d.error||JSON.stringify(d)));
+async function submit(pId,tId,mId){
+  const d=await apiPost('submit=1',{productImageFileId:pId,templateImageFileId:tId,templateMaskFileId:mId});
+  if(!d.ok)throw new Error('Submit: '+(d.error||JSON.stringify(d)));
   return d.taskId;
 }
 async function poll(taskId,cb){
   for(let i=0;i<80;i++){
     await new Promise(r=>setTimeout(r,3000));
     const d=await apiGet(`query=${encodeURIComponent(taskId)}`);
-    if(d.code!=='200') throw new Error('Query: '+JSON.stringify(d));
+    if(d.code!=='200')throw new Error('Query: '+JSON.stringify(d));
     const r=d.result||d;
-    if(cb) cb(r.status||'?',i);
+    if(cb)cb(r.status||'?',i);
     if(r.status==='success'){
       const url=(r.anyfitImages||[])[0]?.url;
-      if(!url) throw new Error('Sin URL en resultado: '+JSON.stringify(d));
+      if(!url)throw new Error('Sin URL: '+JSON.stringify(d));
       return url;
     }
-    if(r.status==='fail'||r.status==='failed') throw new Error('Fallida: '+(r.errorMsg||'?'));
+    if(r.status==='fail'||r.status==='failed')throw new Error('Fallida: '+(r.errorMsg||'?'));
   }
   throw new Error('Timeout');
 }
 
-// ─── Generate ─────────────────────────────────────────────────────
 async function generate(){
-  if(!frontDataUrl||!backDataUrl) return;
-  const btn=document.getElementById('gen-btn');
-  btn.disabled=true;
+  if(!frontDataUrl||!backDataUrl)return;
+  const btn=document.getElementById('gen-btn');btn.disabled=true;
   document.getElementById('results').style.display='none';
   try{
     const b64=url=>url.split(',')[1];
-
     st('Subiendo frente…');
     const fId=await upload(b64(frontDataUrl));
-
     st('Subiendo espalda…');
     const bId=await upload(b64(backDataUrl));
-
     st('Creando tareas…');
     const [fTask,bTask]=await Promise.all([submit(fId,TMPL_F,MASK_F),submit(bId,TMPL_B,MASK_B)]);
-
     st('Generando (30–60s)…');
     const [fUrl,bUrl]=await Promise.all([
       poll(fTask,(s,i)=>st(`Generando… ${i*3}s — frente:${s}`)),
       poll(bTask),
     ]);
-
     st('Post-proceso…');
     const [fp,bp]=await Promise.all([
       postProcess(`/api/topview?proxy=${encodeURIComponent(fUrl)}`,true),
       postProcess(`/api/topview?proxy=${encodeURIComponent(bUrl)}`,false),
     ]);
-
     document.getElementById('result-front').src=fp;
     document.getElementById('result-back').src=bp;
     document.getElementById('dl-front').href=fp;
     document.getElementById('dl-back').href=bp;
     document.getElementById('results').style.display='flex';
     st('✓ Listo');
-  }catch(err){
-    console.error(err);
-    st('Error: '+err.message,true);
-  }
+  }catch(err){console.error(err);st('Error: '+err.message,true);}
   btn.disabled=false;
 }
 
-// ─── File input ───────────────────────────────────────────────────
 document.getElementById('file-input').addEventListener('change',async function(){
-  const file=this.files[0];
-  if(!file)return;
+  const file=this.files[0];if(!file)return;
   document.getElementById('gen-btn').disabled=true;
   try{
     const {front,back}=await readPSD(file);
-    frontDataUrl=front; backDataUrl=back;
+    frontDataUrl=front;backDataUrl=back;
     document.getElementById('preview-front').src=front;
     document.getElementById('preview-back').src=back;
     document.getElementById('preview-row').style.display='flex';
     document.getElementById('gen-btn').disabled=false;
-  }catch(err){
-    console.error(err);
-    st('Error al leer PSD: '+err.message,true);
-  }
-  this.value=''; // reset para poder subir el mismo archivo de nuevo
+  }catch(err){console.error(err);st('Error al leer PSD: '+err.message,true);}
+  this.value='';
 });
 
-
-
-// ─── Drag & drop ──────────────────────────────────────────────────
 const dz=document.getElementById('drop-zone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('active');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('active'));
 dz.addEventListener('drop',async e=>{
-  e.preventDefault(); dz.classList.remove('active');
-  const f=e.dataTransfer.files[0];
-  if(!f)return;
+  e.preventDefault();dz.classList.remove('active');
+  const f=e.dataTransfer.files[0];if(!f)return;
   document.getElementById('gen-btn').disabled=true;
   try{
     const {front,back}=await readPSD(f);
-    frontDataUrl=front; backDataUrl=back;
+    frontDataUrl=front;backDataUrl=back;
     document.getElementById('preview-front').src=front;
     document.getElementById('preview-back').src=back;
     document.getElementById('preview-row').style.display='flex';
     document.getElementById('gen-btn').disabled=false;
-  }catch(err){
-    console.error(err);
-    st('Error al leer PSD: '+err.message,true);
-  }
+  }catch(err){console.error(err);st('Error: '+err.message,true);}
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js" onerror="document.getElementById('status').textContent='Error: no se pudo cargar ag-psd. Verificá tu conexión.';document.getElementById('status').className='err'"></script>
+<script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js"
+  onerror="document.getElementById('status').textContent='Error: no se pudo cargar ag-psd';document.getElementById('status').className='err'">
+</script>
 </body>
 </html>
