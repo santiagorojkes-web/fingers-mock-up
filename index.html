@@ -46,7 +46,7 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
 <div class="upload-area" id="drop-zone">
   <div class="upload-icon">⊕</div>
   <div class="upload-title">Subir archivo PSD</div>
-  <div class="upload-hint">Se extraen frente y espalda automáticamente</div>
+  <div class="upload-hint">Frente y espalda con estampas automáticamente</div>
   <button class="upload-btn" onclick="document.getElementById('file-input').click()">Seleccionar archivo</button>
   <input type="file" id="file-input" accept=".psd">
 </div>
@@ -70,15 +70,17 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
 <canvas id="work-canvas" style="display:none"></canvas>
 
 <script>
-const GRIFA   = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEEAAABOCAYAAAB/oXuQAAACiUlEQVR4nOWcwXLDIAxEpUz+/5fdkx1KsAGhXcnOzuTQTorQYwUYM9Vt2zYhSVVFRIQYckgvRhBVPQDsP2cSHMJZwplAvFENZ0qyJ3cn1NbvfTeDXCFYksoAwqUcMiSyoiUnzFi/106kzBCiO+6paQheo99qN0rDEFDJ1zEiNAThSdZv6RICY/RbMdlqLpFPH/laX07IAIDdhwNChPWvxOzLO1PiUaKcJ1jFGqDUEFhKD4Hhhle2876W0CBeIvkOPtlKXw67kG44IDDdsG3b8cmg2zhBBOeGfxCyjAxbX05AgthLoBzR2XgIN9DKoUy2BjErbxBNCAg31B1fBeEp6sToCcIT4CkE1NzQAhGtkCXSC4SXGy4hsDdQFnmA6DqBVRbIWD2F7RjPJkULiFU3DEFAjVAJYj/jjFg2dfTOErpzdTcs8czzyszFLQ8QZThV7XZ8NqYFxNScwNhJMmLWCn2U3hMs54PVydLi1umbKpatbq8EWvMBc7kMP1RpQT373ahmB8kEYWWURpL2cMIMCLMTVkbG+vSIKpHwchDBzQGjoJcgeLghw8FK6KGKyOfckRmz1jIE9pMf4gHL5UbrzEQ3ctLMBhsyMUa8fboaJDcI6K0tUimWSJbO4LtCuIMbWnHdnYAEgdpXhJfDaGKeyddtQSB4ruWMXWW4E0oxD13LtmEQot8qzcSCOiHDe8YRpSqHCKkqHsId3PDzThAhQcjqhv1BLuTOUrTqp9ifK4fWYFAhRLrh6gwD9q8DsmgEPL0cMl4BCjteQ7c/E+NR5WCFG3pnKUt7t3eCB8wUlzSsf+vlpltulrxLKRzCTEKolzbhEET6INBvrFJAuNLjb6+Val3mYu0u/wB4jkfNNg4AWwAAAABJRU5ErkJggg==';
-const TMPL_F  = '7d7621e822644dd6ad2a997c4c71c609';
-const TMPL_B  = '6a4e9340ec364a60a75bf22cd13604ae';
-const MASK_F  = '38baaeb1c16f4ec1ab994b94b69820f0';
-const MASK_B  = '03b2ad6a11a44c7283e7cfac5e2733d5';
+// ── Config ───────────────────────────────────────────────────────
+const TMPL_F = '7d7621e822644dd6ad2a997c4c71c609';
+const TMPL_B = '6a4e9340ec364a60a75bf22cd13604ae';
+const MASK_F = '38baaeb1c16f4ec1ab994b94b69820f0';
+const MASK_B = '03b2ad6a11a44c7283e7cfac5e2733d5';
 const MAX_DIM = 1400;
-const LABEL   = {y1:1004,y2:1040,x1:1083,x2:1235};
+const LABEL  = {y1:1004,y2:1040,x1:1083,x2:1235};
 
-let frontDataUrl=null, backDataUrl=null;
+let frontDataUrl = null, backDataUrl = null;
+let grifaDataUrl = null;   // grifa extraída del PSD en cada lectura
+
 function st(msg,err=false){const el=document.getElementById('status');el.textContent=msg;el.className=err?'err':'';}
 
 function resize(src){
@@ -97,8 +99,7 @@ function whiten(canvas){
   const d=id.data;
   let mn=255,mx=0;
   for(let i=0;i<d.length;i+=4)if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
-    const v=(d[i]+d[i+1]+d[i+2])/3;
-    if(v<mn)mn=v;if(v>mx)mx=v;
+    const v=(d[i]+d[i+1]+d[i+2])/3;if(v<mn)mn=v;if(v>mx)mx=v;
   }
   if(mx<=mn)return;
   const range=mx-mn;
@@ -112,44 +113,94 @@ function whiten(canvas){
 
 function findL(list,name){return(list||[]).find(l=>l.name===name)||null;}
 function findN(root,...path){let cur=root;for(const s of path){cur=findL(cur.children,s);if(!cur)return null;}return cur;}
-function drawStamp(ctx,layer){
-  if(!layer)return;
-  if(layer.canvas)ctx.drawImage(layer.canvas,layer.left||0,layer.top||0);
-  (layer.children||[]).forEach(c=>drawStamp(ctx,c));
-}
-function buildShirt(W,H,mainObj,stamp){
-  const c=document.createElement('canvas');c.width=W;c.height=H;
-  const ctx=c.getContext('2d');
-  if(mainObj?.canvas)ctx.drawImage(mainObj.canvas,mainObj.left||0,mainObj.top||0);
-  drawStamp(ctx,stamp);
-  const crop=document.createElement('canvas');
-  const {left:l=0,top:t=0,right:r=W,bottom:b=H}=mainObj||{};
-  crop.width=r-l;crop.height=b-t;
-  crop.getContext('2d').drawImage(c,-l,-t);
-  whiten(crop);
-  return resize(crop);
-}
+
+// ── Leer PSD con composite completo ─────────────────────────────
 async function readPSD(file){
-  st('Leyendo PSD…');
-  const buf=await file.arrayBuffer();
-  const psd=agPsd.readPsd(buf,{skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
-  const W=psd.width,H=psd.height;
-  const lM=findN(psd,'Working Process','Left Shirt','Objects','Main Object');
-  const rM=findN(psd,'Working Process','Right Shirt','Objects','Main Object');
-  const eF=findL(psd.children,'Estampa Frontal');
-  const eB=findL(psd.children,'Estampa Espalda');
-  if(!lM||!rM)throw new Error('No se encontraron layers Left/Right Shirt');
-  const fC=buildShirt(W,H,lM,eF);
-  const bC=buildShirt(W,H,rM,eB);
+  st('Leyendo PSD… (puede tardar ~20 segundos en PSDs grandes)');
+  const buf = await file.arrayBuffer();
+
+  // readPsd SIN useImageData para que use el composite del PSD completo
+  // Esto renderiza correctamente shape layers, vector paths, etc.
+  const psd = agPsd.readPsd(buf, {
+    skipLayerImageData: false,
+    useRawThumbnail: false,
+  });
+
+  if(!psd.canvas) throw new Error('El PSD no tiene composite válido');
+
+  // Encontrar bboxes de las remeras (Main Object = pixel layer, siempre disponible)
+  const lM = findN(psd,'Working Process','Left Shirt','Objects','Main Object');
+  const rM = findN(psd,'Working Process','Right Shirt','Objects','Main Object');
+  if(!lM||!rM) throw new Error('No se encontraron Left/Right Shirt');
+
+  // Crop del composite completo a cada remera
+  // El composite incluye TODAS las capas: estampas shapes, texto, todo
+  function cropTo(bbox){
+    const {left:l,top:t,right:r,bottom:b} = bbox;
+    const c = document.createElement('canvas');
+    c.width=r-l; c.height=b-t;
+    c.getContext('2d').drawImage(psd.canvas,-l,-t);
+    return c;
+  }
+
+  // Para el front: extraer también la grifa DEL composite y borrarla del shirt
+  const grifaLayer = findL(psd.children,'Grifa Frente');
+  let grifaImg = null;
+
+  if(grifaLayer){
+    // Extraer grifa del composite completo usando su bbox
+    const gl = grifaLayer;
+    const gW = gl.right - gl.left;
+    const gH = gl.bottom - gl.top;
+    if(gW > 0 && gH > 0){
+      const gc = document.createElement('canvas');
+      gc.width=gW; gc.height=gH;
+      gc.getContext('2d').drawImage(psd.canvas,-gl.left,-gl.top);
+      grifaImg = gc;
+      grifaDataUrl = gc.toDataURL('image/png');
+      console.log(`Grifa extraída del PSD: ${gW}x${gH}px en (${gl.left},${gl.top})`);
+    }
+  }
+
+  // Front: crop composite + borrar la grifa del área de la remera
+  // (para no mandar la grifa a TopView y agregarla nosotros en post-proceso)
+  let fC = cropTo(lM);
+
+  if(grifaLayer && lM){
+    // Calcular posición de la grifa relativa al shirt (lM)
+    const gx = grifaLayer.left - lM.left;
+    const gy = grifaLayer.top  - lM.top;
+    const gw = grifaLayer.right  - grifaLayer.left;
+    const gh = grifaLayer.bottom - grifaLayer.top;
+    if(gx>=0 && gy>=0 && gx+gw<=fC.width){
+      // Borrar la grifa del shirt llenando con blanco
+      const ctx = fC.getContext('2d');
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(gx-2, gy-2, gw+4, gh+4);
+      console.log(`Grifa borrada del shirt en (${gx},${gy}) ${gw}x${gh}`);
+    }
+  }
+
+  whiten(fC);
+  const bC = cropTo(rM);
+  whiten(bC);
+
+  const fFinal = resize(fC);
+  const bFinal = resize(bC);
+
   const kb=c=>Math.round(c.toDataURL('image/jpeg',.92).length*.75/1024);
-  st(`✓ PSD leído — frente ~${kb(fC)}KB · espalda ~${kb(bC)}KB`);
-  return{front:fC.toDataURL('image/jpeg',.92),back:bC.toDataURL('image/jpeg',.92)};
+  st(`✓ PSD leído${grifaImg?' (grifa extraída)':''} — frente ~${kb(fFinal)}KB · espalda ~${kb(bFinal)}KB`);
+
+  return{
+    front: fFinal.toDataURL('image/jpeg',.92),
+    back:  bFinal.toDataURL('image/jpeg',.92),
+  };
 }
 
-// Centering
+// ── Centering ────────────────────────────────────────────────────
 function detectOff(d,w,h){
   const avg=(x,y)=>{const i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;};
-  const fondo=(avg(20,20)+avg(w-20,20))/2;  // solo esquinas superiores
+  const fondo=(avg(20,20)+avg(w-20,20))/2;
   const centers=[];
   for(let y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15){
     let l=-1,r=-1;
@@ -159,8 +210,7 @@ function detectOff(d,w,h){
   }
   if(!centers.length)return 0;
   const sorted=centers.slice().sort((a,b)=>a-b);
-  const med=sorted[Math.floor(sorted.length/2)];
-  let off=Math.round(med-w/2);
+  let off=Math.round(sorted[Math.floor(sorted.length/2)]-w/2);
   off=Math.max(-180,Math.min(180,off));
   if(Math.abs(off)<15)off=0;
   console.log('centering offset:',off,'px');
@@ -177,9 +227,8 @@ function center(canvas,ctx,off){
   ctx.drawImage(tmp,-off,0);
 }
 
-// Remove artifact (interpolate)
 function removeArt(id,y1,y2,x1,x2,rows=15){
-  const {data:d,width:w,height:h}=id;
+  const{data:d,width:w,height:h}=id;
   const above=[],below=[];
   for(let x=x1;x<x2;x++){
     let r=0,g=0,b=0,n=0;
@@ -202,7 +251,7 @@ function removeArt(id,y1,y2,x1,x2,rows=15){
   return id;
 }
 
-// Post-process
+// ── Post-proceso ─────────────────────────────────────────────────
 async function postProcess(imgUrl,isFront){
   return new Promise((resolve,reject)=>{
     const img=new Image();img.crossOrigin='anonymous';
@@ -210,21 +259,17 @@ async function postProcess(imgUrl,isFront){
     img.onload=()=>{
       const c=document.getElementById('work-canvas');
       c.width=img.width;c.height=img.height;
-      const ctx=c.getContext('2d');
-      ctx.drawImage(img,0,0);
-
-      // 1. Centrar
+      const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
       const raw=ctx.getImageData(0,0,c.width,c.height);
       const off=detectOff(raw.data,c.width,c.height);
       center(c,ctx,off);
 
       if(isFront){
-        // 2. Remover etiqueta interna
         let id=ctx.getImageData(0,0,c.width,c.height);
         id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);
         ctx.putImageData(id,0,0);
 
-        // 3. Detectar borde derecho de manga (CENTRADA) → colocar grifa
+        // Detectar sleeve edge y colocar grifa del PSD
         const centId=ctx.getImageData(0,0,c.width,c.height);
         const cFondo=(centId.data[20*4]+centId.data[20*4+1]+centId.data[20*4+2])/3*0.5
                     +(centId.data[(20*c.width+(c.width-20))*4]+centId.data[(20*c.width+(c.width-20))*4+1]+centId.data[(20*c.width+(c.width-20))*4+2])/3*0.5;
@@ -237,15 +282,23 @@ async function postProcess(imgUrl,isFront){
           }
         }
         const slvEdge=edges.length?edges.slice().sort((a,b)=>a-b)[Math.floor(edges.length/2)]:c.width-80;
-        // Grifa: borde derecho pegado al borde de la manga (65px de ancho)
-        const gX=slvEdge-65;
         const gY=Math.floor(c.height*.555);
-        console.log('Sleeve edge:',slvEdge,'grifa at x:',gX,'y:',gY);
 
-        const g=new Image();
-        g.onload=()=>{ctx.drawImage(g,gX,gY);resolve(c.toDataURL('image/jpeg',.95));};
-        g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95));
-        g.src=GRIFA;
+        // Usar grifa del PSD si está disponible, sino fallback
+        const grifaSrc = grifaDataUrl || null;
+        if(grifaSrc){
+          const g=new Image();
+          g.onload=()=>{
+            const gX=slvEdge-g.width;  // borde derecho pegado al borde de la manga
+            console.log('sleeve:',slvEdge,'grifa:',gX,gY,'size:',g.width+'x'+g.height);
+            ctx.drawImage(g,gX,gY);
+            resolve(c.toDataURL('image/jpeg',.95));
+          };
+          g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95));
+          g.src=grifaSrc;
+        }else{
+          resolve(c.toDataURL('image/jpeg',.95));
+        }
       }else{
         resolve(c.toDataURL('image/jpeg',.95));
       }
@@ -254,7 +307,7 @@ async function postProcess(imgUrl,isFront){
   });
 }
 
-// API
+// ── API ──────────────────────────────────────────────────────────
 async function apiPost(q,body){
   const res=await fetch(`/api/topview?${q}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const txt=await res.text();try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
@@ -296,10 +349,8 @@ async function generate(){
   document.getElementById('results').style.display='none';
   try{
     const b64=url=>url.split(',')[1];
-    st('Subiendo frente…');
-    const fId=await upload(b64(frontDataUrl));
-    st('Subiendo espalda…');
-    const bId=await upload(b64(backDataUrl));
+    st('Subiendo frente…');const fId=await upload(b64(frontDataUrl));
+    st('Subiendo espalda…');const bId=await upload(b64(backDataUrl));
     st('Creando tareas…');
     const [fTask,bTask]=await Promise.all([submit(fId,TMPL_F,MASK_F),submit(bId,TMPL_B,MASK_B)]);
     st('Generando (30–60s)…');
@@ -325,8 +376,9 @@ async function generate(){
 document.getElementById('file-input').addEventListener('change',async function(){
   const file=this.files[0];if(!file)return;
   document.getElementById('gen-btn').disabled=true;
+  grifaDataUrl=null;  // reset grifa al cambiar PSD
   try{
-    const {front,back}=await readPSD(file);
+    const{front,back}=await readPSD(file);
     frontDataUrl=front;backDataUrl=back;
     document.getElementById('preview-front').src=front;
     document.getElementById('preview-back').src=back;
@@ -343,18 +395,19 @@ dz.addEventListener('drop',async e=>{
   e.preventDefault();dz.classList.remove('active');
   const f=e.dataTransfer.files[0];if(!f)return;
   document.getElementById('gen-btn').disabled=true;
+  grifaDataUrl=null;
   try{
-    const {front,back}=await readPSD(f);
+    const{front,back}=await readPSD(f);
     frontDataUrl=front;backDataUrl=back;
     document.getElementById('preview-front').src=front;
     document.getElementById('preview-back').src=back;
     document.getElementById('preview-row').style.display='flex';
     document.getElementById('gen-btn').disabled=false;
-  }catch(err){console.error(err);st('Error: '+err.message,true);}
+  }catch(err){st('Error: '+err.message,true);}
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js"
-  onerror="document.getElementById('status').textContent='Error: no se pudo cargar ag-psd';document.getElementById('status').className='err'">
+  onerror="document.getElementById('status').textContent='Error cargando ag-psd';document.getElementById('status').className='err'">
 </script>
 </body>
 </html>
