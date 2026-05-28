@@ -1,69 +1,46 @@
-// api/topview.js — Proxy correcto según documentación oficial de TopView
-// Base URL real: https://api.topview.ai (NO www.topview.ai)
-// Docs: https://docs.topview.ai/reference/upload-api-usage
+// api/topview.js — Proxy para TopView API (api.topview.ai)
 
 export const config = { api: { bodyParser: { sizeLimit: '20mb' } } };
 
-const UID     = '8EOyIj2GRQ0Ksxi0qEc4';
-const KEY     = 'Bearer sk-dPXUdN-0XmRsv6u7wPfu_Jl5lZKC11HOsCvMESsEA34';
-const API     = 'https://api.topview.ai';
+const UID  = '8EOyIj2GRQ0Ksxi0qEc4';
+const KEY  = 'Bearer sk-dPXUdN-0XmRsv6u7wPfu_Jl5lZKC11HOsCvMESsEA34';
+const API  = 'https://api.topview.ai';
+const HDR  = { 'Topview-Uid': UID, 'Authorization': KEY, 'Accept': '*/*' };
 
-const HEADERS = { 'Topview-Uid': UID, 'Authorization': KEY };
-
-// ── Paso 1: obtener credencial de upload ──────────────────────────
-async function getUploadCredential() {
-  const r = await fetch(`${API}/v1/upload/credential?format=jpg`, {
-    headers: { ...HEADERS, 'Accept': '*/*' }
-  });
-  const d = await safeJSON(r, 'credential');
-  if (d.code !== '200') throw new Error(`Credential failed: ${JSON.stringify(d)}`);
-  return d.result; // { fileId, uploadUrl, fileName }
-}
-
-// ── Paso 2: upload directo a S3 con pre-signed URL ────────────────
-async function uploadToS3(uploadUrl, imageBuffer) {
-  const r = await fetch(uploadUrl, {
-    method: 'PUT',
-    body: imageBuffer,
-    headers: { 'Content-Type': 'image/jpeg' }
-  });
-  if (!r.ok) throw new Error(`S3 upload HTTP ${r.status}`);
-}
-
-// ── Paso 3: verificar que el upload llegó ─────────────────────────
-async function checkUpload(fileId) {
-  const r = await fetch(`${API}/v1/upload/check?fileId=${fileId}`, {
-    headers: { ...HEADERS, 'Accept': '*/*' }
-  });
-  const d = await safeJSON(r, 'check');
-  if (d.code !== '200' || d.result !== true)
-    throw new Error(`Upload check failed: ${JSON.stringify(d)}`);
-}
-
-// ── Upload completo: credential → S3 → check ─────────────────────
-async function uploadImage(base64) {
-  const buf              = Buffer.from(base64, 'base64');
-  const { fileId, uploadUrl } = await getUploadCredential();
-  await uploadToS3(uploadUrl, buf);
-  await checkUpload(fileId);
-  return fileId;
-}
-
-// ── Helper: parse JSON con error claro ───────────────────────────
 async function safeJSON(res, label) {
   const text = await res.text();
   try { return JSON.parse(text); }
-  catch { throw new Error(`${label} non-JSON (HTTP ${res.status}): ${text.slice(0, 200)}`); }
+  catch { throw new Error(`${label} non-JSON (HTTP ${res.status}): ${text.slice(0, 300)}`); }
 }
 
-// ── Handler ───────────────────────────────────────────────────────
+// ── Upload: 3 pasos (credential → S3 PUT → check) ─────────────────
+async function uploadImage(base64) {
+  // 1. Credential
+  const r1  = await fetch(`${API}/v1/upload/credential?format=jpg`, { headers: HDR });
+  const d1  = await safeJSON(r1, 'credential');
+  if (d1.code !== '200') throw new Error(`Credential: ${JSON.stringify(d1)}`);
+  const { fileId, uploadUrl } = d1.result;
+
+  // 2. PUT a S3
+  const buf = Buffer.from(base64, 'base64');
+  const r2  = await fetch(uploadUrl, { method: 'PUT', body: buf, headers: { 'Content-Type': 'image/jpeg' } });
+  if (!r2.ok) throw new Error(`S3 upload HTTP ${r2.status}`);
+
+  // 3. Check
+  const r3 = await fetch(`${API}/v1/upload/check?fileId=${fileId}`, { headers: HDR });
+  const d3 = await safeJSON(r3, 'check');
+  if (d3.code !== '200' || d3.result !== true) throw new Error(`Check: ${JSON.stringify(d3)}`);
+
+  return fileId;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // ── GET ?proxy=URL — imagen proxy para Canvas ──────────────────
+  // GET ?proxy=URL — imagen proxy para Canvas (crossOrigin)
   if (req.method === 'GET' && req.query.proxy) {
     try {
       const r   = await fetch(decodeURIComponent(req.query.proxy));
@@ -74,20 +51,21 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(500).json({ error: e.message }); }
   }
 
-  // ── GET ?query=taskId — consulta resultado tarea ───────────────
+  // GET ?query=taskId — consulta resultado
   if (req.method === 'GET' && req.query.query) {
     try {
       const r = await fetch(
         `${API}/v3/product_anyShoot/product_model/task/result?taskId=${encodeURIComponent(req.query.query)}`,
-        { headers: HEADERS }
+        { headers: HDR }
       );
+      // Devolver la respuesta tal cual para que el browser la interprete
       return res.status(200).json(await safeJSON(r, 'query'));
     } catch (e) { return res.status(500).json({ error: e.message }); }
   }
 
   if (req.method !== 'POST') return res.status(405).end();
 
-  // ── POST ?upload=1 — sube imagen y devuelve fileId ────────────
+  // POST ?upload=1 — sube imagen, devuelve fileId
   if (req.query.upload) {
     try {
       const { imageBase64 } = req.body;
@@ -100,21 +78,23 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST ?submit=front|back — crea tarea de generación ────────
+  // POST ?submit=1 — crea tarea, devuelve taskId
   if (req.query.submit) {
     try {
       const { productImageFileId, templateImageFileId, templateMaskFileId } = req.body;
       const r = await fetch(`${API}/v3/product_anyShoot/product_model/task/submit`, {
         method:  'POST',
-        headers: { ...HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productImageFileId,
-          templateImageFileId,
-          templateMaskFileId,
-          generatingCount: '1',
-        }),
+        headers: { ...HDR, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productImageFileId, templateImageFileId, templateMaskFileId, generatingCount: '1' }),
       });
-      return res.status(200).json(await safeJSON(r, 'submit'));
+      const d = await safeJSON(r, 'submit');
+
+      // La API devuelve code "200" y taskId en result.taskId (o directo en d.taskId)
+      if (d.code !== '200') throw new Error(`Submit: ${JSON.stringify(d)}`);
+      const taskId = d.result?.taskId ?? d.taskId;
+      if (!taskId) throw new Error(`taskId no encontrado en: ${JSON.stringify(d)}`);
+
+      return res.status(200).json({ ok: true, taskId });
     } catch (e) {
       console.error('Submit error:', e.message);
       return res.status(500).json({ error: e.message });
