@@ -201,9 +201,9 @@ async function readPSD(file){
 
 // ─── Centering ───────────────────────────────────────────────────
 function detectOff(d,w,h){
-  // Fondo: promedio de cuatro esquinas
+  // Solo esquinas SUPERIORES: las inferiores tienen pantalón oscuro que corrompe el valor
   const avg=(x,y)=>{const i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;};
-  const fondo=(avg(20,20)+avg(w-20,20)+avg(20,h-20)+avg(w-20,h-20))/4;
+  const fondo=(avg(20,20)+avg(w-20,20))/2;
   const centers=[];
   for(let y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15){
     let l=-1,r=-1;
@@ -276,13 +276,29 @@ async function postProcess(imgUrl,isFront){
         let id=ctx.getImageData(0,0,c.width,c.height);
         id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);
         ctx.putImageData(id,0,0);
-        // 3. Agregar grifa (manga derecha)
+        // 3. Detectar borde derecho de manga en imagen CENTRADA
+        const centId=ctx.getImageData(0,0,c.width,c.height);
+        const cFondo=(centId.data[20*4]+centId.data[20*4+1]+centId.data[20*4+2])/3*0.5
+                    +(centId.data[(20*c.width+(c.width-20))*4]+centId.data[(20*c.width+(c.width-20))*4+1]+centId.data[(20*c.width+(c.width-20))*4+2])/3*0.5;
+        const slvEdges=[];
+        const yA=Math.floor(c.height*.51),yB=Math.floor(c.height*.57);
+        for(let sy=yA;sy<yB;sy+=4){
+          for(let sx=c.width-1;sx>=c.width/2;sx--){
+            const si=(sy*c.width+sx)*4;
+            if(Math.abs((centId.data[si]+centId.data[si+1]+centId.data[si+2])/3-cFondo)>18){slvEdges.push(sx);break;}
+          }
+        }
+        const slvEdge=slvEdges.length?slvEdges.sort((a,b)=>a-b)[Math.floor(slvEdges.length/2)]:c.width-100;
+        const gX=slvEdge-80;   // 80px dentro desde el borde de la manga
+        const gY=Math.floor(c.height*.535);
+        console.log('Sleeve right edge (centered):',slvEdge,'grifa at x:',gX,'y:',gY);
+        // 4. Agregar grifa (manga izquierda del modelo = derecha del viewer)
         const g=new Image();
         g.onload=()=>{
-          ctx.drawImage(g,GRF.x,GRF.y);
+          ctx.drawImage(g,gX,gY);
           resolve(c.toDataURL('image/jpeg',.95));
         };
-        g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95)); // continuar sin grifa si falla
+        g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95));
         g.src=GRIFA;
       } else {
         resolve(c.toDataURL('image/jpeg',.95));
