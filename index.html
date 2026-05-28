@@ -208,8 +208,7 @@ async function submitTask(productFileId, templateFileId, maskFileId) {
     templateImageFileId: templateFileId,
     templateMaskFileId:  maskFileId,
   });
-  // code es string "200"
-  if(d.code!=='200') throw new Error('Submit: '+JSON.stringify(d));
+  if(!d.ok) throw new Error('Submit: '+(d.error||JSON.stringify(d)));
   return d.taskId;
 }
 
@@ -218,14 +217,16 @@ async function pollTask(taskId, onStatus) {
     await new Promise(r=>setTimeout(r,3000));
     const d=await apiGet(`query=${encodeURIComponent(taskId)}`);
     if(d.code!=='200') throw new Error('Query: '+JSON.stringify(d));
-    const s=d.status;
+    // result puede estar en d.result o directo en d
+    const r=d.result||d;
+    const s=r.status;
     if(onStatus)onStatus(s,i);
     if(s==='success'){
-      const url=d.anyfitImages?.[0]?.url;
-      if(!url) throw new Error('Sin URL en resultado');
+      const url=(r.anyfitImages||[])[0]?.url;
+      if(!url) throw new Error('Sin URL: '+JSON.stringify(d));
       return url;
     }
-    if(s==='fail'||s==='failed') throw new Error('Tarea fallida: '+(d.errorMsg||'sin detalle'));
+    if(s==='fail'||s==='failed') throw new Error('Fallida: '+(r.errorMsg||'sin detalle'));
   }
   throw new Error('Timeout');
 }
