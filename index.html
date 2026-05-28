@@ -81,7 +81,10 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
     <img id="result-front" src="" alt="Frente">
     <div class="result-footer">
       <span class="result-title">Frente</span>
-      <a class="dl-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a>
+      <div style="display:flex;gap:8px">
+        <button class="dl-btn" onclick="openCalibration()" style="cursor:pointer">Calibrar grifa</button>
+        <a class="dl-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a>
+      </div>
     </div>
   </div>
   <div class="result-card">
@@ -90,6 +93,26 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
       <span class="result-title">Espalda</span>
       <a class="dl-btn" id="dl-back" download="mockup_espalda.jpg">Descargar</a>
     </div>
+  </div>
+</div>
+
+
+<!-- Calibración de grifa -->
+<div id="calibrate-box" style="display:none;max-width:800px;margin:24px auto;padding:20px;border:1px solid #2a2a2a;border-radius:4px;background:#111">
+  <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#c8ff00;margin-bottom:12px">⊕ Calibrar posición de grifa</div>
+  <div style="font-size:12px;color:#666;margin-bottom:16px">Hacé click en la imagen de frente donde debería aparecer la grifa</div>
+  <div style="position:relative;display:inline-block;max-width:100%;border:1px solid #222;border-radius:4px;overflow:hidden">
+    <img id="calibrate-img" style="width:100%;display:block;cursor:crosshair">
+    <div id="calibrate-marker" style="display:none;position:absolute;width:65px;height:78px;border:2px solid #c8ff00;border-radius:3px;pointer-events:none;transform:translate(-50%,-50%)">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <img id="calibrate-grifa-preview" style="width:100%;height:100%;object-fit:contain">
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <span id="calibrate-coords" style="font-size:11px;color:#444;font-family:monospace">Click para marcar posición</span>
+    <button onclick="applyCalibration()" style="background:#c8ff00;color:#000;border:none;padding:7px 20px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px">Guardar posición</button>
+    <button onclick="document.getElementById('calibrate-box').style.display='none'" style="background:transparent;border:1px solid #333;color:#666;padding:7px 16px;font-size:11px;cursor:pointer;border-radius:2px">Cancelar</button>
   </div>
 </div>
 
@@ -289,8 +312,14 @@ async function postProcess(imgUrl,isFront){
           }
         }
         const slvEdge=slvEdges.length?slvEdges.sort((a,b)=>a-b)[Math.floor(slvEdges.length/2)]:c.width-100;
-        const gX=slvEdge-80;   // 80px dentro desde el borde de la manga
-        const gY=Math.floor(c.height*.535);
+        // Usar posición calibrada si existe, sino detección dinámica
+        let gX, gY;
+        try {
+          const saved = JSON.parse(localStorage.getItem('grifaPos')||'null');
+          if(saved){ gX=saved.x; gY=saved.y; }
+          else { gX=slvEdge-80; gY=Math.floor(c.height*.535); }
+        } catch(e){ gX=slvEdge-80; gY=Math.floor(c.height*.535); }
+        // gY ya definido arriba
         console.log('Sleeve right edge (centered):',slvEdge,'grifa at x:',gX,'y:',gY);
         // 4. Agregar grifa (manga izquierda del modelo = derecha del viewer)
         const g=new Image();
@@ -408,6 +437,62 @@ document.getElementById('file-input').addEventListener('change',async function()
   }
   this.value=''; // reset para poder subir el mismo archivo de nuevo
 });
+
+
+// ─── Calibración de grifa ─────────────────────────────────────────
+// Posición guardada (en píxeles del canvas 1536x2730)
+// Cargada desde localStorage si existe
+let savedGrifaOffset = JSON.parse(localStorage.getItem('grifaOffset')||'null');
+// El offset es relativo al borde derecho de la manga:
+// grifaX = slvEdge - savedGrifaOffset (default 80)
+// O si se calibró con abs position: usar grifaAbsX, grifaAbsY
+
+let calibratedGrifaX = null, calibratedGrifaY = null;
+try {
+  const saved = JSON.parse(localStorage.getItem('grifaPos')||'null');
+  if(saved) { calibratedGrifaX=saved.x; calibratedGrifaY=saved.y; }
+} catch(e){}
+
+function openCalibration(){
+  const img = document.getElementById('result-front');
+  if(!img.src) return;
+  const calImg = document.getElementById('calibrate-img');
+  calImg.src = img.src;
+  const calGrifa = document.getElementById('calibrate-grifa-preview');
+  calGrifa.src = GRIFA;
+  document.getElementById('calibrate-box').style.display='block';
+  document.getElementById('calibrate-box').scrollIntoView({behavior:'smooth'});
+  
+  // Click para marcar
+  calImg.onclick = function(e){
+    const rect = calImg.getBoundingClientRect();
+    const scaleX = 1536 / calImg.clientWidth;   // escala a coords reales
+    const scaleY = 2730 / calImg.clientHeight;
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top)  * scaleY;
+    // Posición visual del marker (en %)
+    const pctX = (e.clientX - rect.left) / calImg.clientWidth * 100;
+    const pctY = (e.clientY - rect.top)  / calImg.clientHeight * 100;
+    const marker = document.getElementById('calibrate-marker');
+    marker.style.display = 'block';
+    marker.style.left = pctX+'%';
+    marker.style.top  = pctY+'%';
+    // Guardar coords reales
+    calibratedGrifaX = Math.round(clickX);
+    calibratedGrifaY = Math.round(clickY);
+    document.getElementById('calibrate-coords').textContent =
+      'Posición: x='+calibratedGrifaX+', y='+calibratedGrifaY+' (en canvas 1536×2730)';
+  };
+}
+
+function applyCalibration(){
+  if(calibratedGrifaX===null) return;
+  localStorage.setItem('grifaPos', JSON.stringify({x:calibratedGrifaX,y:calibratedGrifaY}));
+  document.getElementById('calibrate-box').style.display='none';
+  document.getElementById('calibrate-coords').textContent='Click para marcar posición';
+  document.getElementById('calibrate-marker').style.display='none';
+  alert('✓ Posición guardada. Los próximos mockups usarán x='+calibratedGrifaX+', y='+calibratedGrifaY);
+}
 
 // ─── Drag & drop ──────────────────────────────────────────────────
 const dz=document.getElementById('drop-zone');
