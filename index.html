@@ -5,94 +5,121 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fingers Crossed — Mockup Generator</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{--bg:#0a0a0a;--fg:#f0f0f0;--gray:#666;--accent:#c8ff00;--border:#1f1f1f}
-  body{background:var(--bg);color:var(--fg);font-family:'Helvetica Neue',Arial,sans-serif;min-height:100vh;padding:40px 20px}
-  header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:40px}
-  .logo{font-size:13px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
-  .subtitle{font-size:11px;color:var(--gray);letter-spacing:.1em;text-transform:uppercase}
-  .upload-zone{display:block;border:1px dashed #2a2a2a;border-radius:4px;padding:56px 40px;text-align:center;cursor:pointer;transition:border-color .2s;max-width:640px;margin:0 auto 32px}
-  .upload-zone:hover{border-color:var(--accent)}
-  .upload-zone.drag-over{border-color:var(--accent);background:rgba(200,255,0,.03)}
-  #file-input{display:none}
-  .upload-icon{font-size:28px;margin-bottom:14px;opacity:.35}
-  .upload-label{font-size:13px;color:var(--gray);letter-spacing:.05em}
-  .upload-hint{font-size:11px;color:#404040;margin-top:6px}
-  #preview-row{display:none;gap:16px;max-width:640px;margin:0 auto 28px}
-  .preview-half{flex:1;aspect-ratio:3/4;background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  .preview-half img{width:100%;height:100%;object-fit:contain}
-  .preview-label{font-size:10px;color:var(--gray);text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
-  .generate-btn{display:block;margin:0 auto 40px;background:var(--accent);color:var(--bg);border:none;padding:14px 56px;font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px;transition:background .15s}
-  .generate-btn:hover{background:#d4ff33}
-  .generate-btn:disabled{opacity:.3;cursor:not-allowed}
-  #status{text-align:center;font-size:12px;color:var(--gray);letter-spacing:.08em;min-height:20px;margin-bottom:32px}
-  #status.error{color:#ff5555}
-  #results{display:none;max-width:800px;margin:0 auto;gap:32px}
-  .result-card{background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden}
-  .result-card img{width:100%;display:block}
-  .result-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
-  .result-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray)}
-  .download-btn{background:transparent;border:1px solid var(--border);color:var(--fg);padding:6px 16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;text-decoration:none}
-  .download-btn:hover{border-color:var(--accent);color:var(--accent)}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0a;--fg:#f0f0f0;--gray:#666;--accent:#c8ff00;--border:#222}
+body{background:var(--bg);color:var(--fg);font-family:'Helvetica Neue',Arial,sans-serif;min-height:100vh;padding:40px 20px}
+header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:40px}
+.logo{font-size:13px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.subtitle{font-size:11px;color:var(--gray);letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+
+.upload-area{max-width:640px;margin:0 auto 32px;border:1px dashed #2a2a2a;border-radius:4px;padding:48px;text-align:center}
+.upload-area.active{border-color:var(--accent);background:rgba(200,255,0,.03)}
+.upload-icon{font-size:32px;opacity:.3;margin-bottom:12px}
+.upload-title{font-size:13px;color:var(--gray);margin-bottom:8px}
+.upload-hint{font-size:11px;color:#404040}
+.upload-btn{
+  display:inline-block;margin-top:16px;padding:10px 28px;
+  background:var(--accent);color:#000;border:none;
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  cursor:pointer;border-radius:2px;
+}
+.upload-btn:hover{background:#d4ff33}
+#file-input{display:none}
+
+#preview-row{display:none;gap:16px;max-width:640px;margin:0 auto 28px}
+.preview-box{flex:1}
+.preview-img{aspect-ratio:3/4;background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.preview-img img{width:100%;height:100%;object-fit:contain}
+.preview-lbl{font-size:10px;color:var(--gray);text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
+
+.gen-btn{display:block;margin:0 auto 32px;background:var(--accent);color:#000;border:none;padding:14px 56px;font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px}
+.gen-btn:disabled{opacity:.3;cursor:not-allowed}
+
+#status{text-align:center;font-size:12px;color:var(--gray);min-height:20px;margin-bottom:32px;padding:0 20px}
+#status.err{color:#ff5555}
+
+#results{display:none;max-width:800px;margin:0 auto;gap:32px}
+.result-card{background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.result-card img{width:100%;display:block}
+.result-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
+.result-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray)}
+.dl-btn{background:transparent;border:1px solid var(--border);color:var(--fg);padding:6px 16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;text-decoration:none;transition:all .15s}
+.dl-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
+
 <header>
-  <div><div class="logo">Fingers Crossed</div><div class="subtitle">Mockup Generator</div></div>
+  <div class="logo">Fingers Crossed</div>
+  <div class="subtitle">Mockup Generator</div>
 </header>
 
-<label class="upload-zone" id="drop-zone" for="file-input">
-  <input type="file" id="file-input" accept=".psd,image/*">
+<div class="upload-area" id="drop-zone">
   <div class="upload-icon">⊕</div>
-  <div class="upload-label">Subir archivo PSD</div>
+  <div class="upload-title">Subir archivo PSD</div>
   <div class="upload-hint">Se extraen frente y espalda automáticamente</div>
-</label>
-
-<div id="preview-row">
-  <div><div class="preview-half"><img id="preview-front"/></div><div class="preview-label">Frente</div></div>
-  <div><div class="preview-half"><img id="preview-back"/></div><div class="preview-label">Espalda</div></div>
+  <button class="upload-btn" onclick="document.getElementById('file-input').click()">Seleccionar archivo</button>
+  <input type="file" id="file-input" accept=".psd">
 </div>
 
-<button class="generate-btn" id="generate-btn" disabled>Generar Mockup</button>
+<div id="preview-row" style="display:none;flex-direction:row;gap:16px;max-width:640px;margin:0 auto 28px">
+  <div class="preview-box">
+    <div class="preview-img"><img id="preview-front" src="" alt="Frente"></div>
+    <div class="preview-lbl">Frente</div>
+  </div>
+  <div class="preview-box">
+    <div class="preview-img"><img id="preview-back" src="" alt="Espalda"></div>
+    <div class="preview-lbl">Espalda</div>
+  </div>
+</div>
+
+<button class="gen-btn" id="gen-btn" disabled onclick="generate()">Generar Mockup</button>
 <div id="status"></div>
 
-<div id="results">
+<div id="results" style="display:none;flex-direction:column;gap:32px;max-width:800px;margin:0 auto">
   <div class="result-card">
-    <img id="result-front"/>
+    <img id="result-front" src="" alt="Frente">
     <div class="result-footer">
       <span class="result-title">Frente</span>
-      <a class="download-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a>
+      <a class="dl-btn" id="dl-front" download="mockup_frente.jpg">Descargar</a>
     </div>
   </div>
   <div class="result-card">
-    <img id="result-back"/>
+    <img id="result-back" src="" alt="Espalda">
     <div class="result-footer">
       <span class="result-title">Espalda</span>
-      <a class="download-btn" id="dl-back" download="mockup_espalda.jpg">Descargar</a>
+      <a class="dl-btn" id="dl-back" download="mockup_espalda.jpg">Descargar</a>
     </div>
   </div>
 </div>
+
 <canvas id="work-canvas" style="display:none"></canvas>
-<script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js"></script>
+
 <script>
-const GRIFA_DATA_URL = 'data:image/png;base64,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';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';
-const POST = {
-  LABEL:       {y1:1004,y2:1040,x1:1083,x2:1235},
-  GRIFA_FRONT: {x:1046,y:1462},
-  GRIFA_BACK:  {y1:1453,y2:1535,x1:383,x2:450},
-};
+// ─── Config ──────────────────────────────────────────────────────
+const GRIFA    = 'data:image/png;base64,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';
+const TMPL_F   = '7d7621e822644dd6ad2a997c4c71c609';
+const TMPL_B   = '6a4e9340ec364a60a75bf22cd13604ae';
+const MASK_F   = '38baaeb1c16f4ec1ab994b94b69820f0';
+const MASK_B   = '03b2ad6a11a44c7283e7cfac5e2733d5';
+const MAX_DIM  = 1400;
+// Post-proceso coords (imagen centrada 1536x2730)
+const LABEL    = {y1:1004,y2:1040,x1:1083,x2:1235};
+const GRF      = {x:1046,y:1462};   // manga DERECHA (viewer right)
+const GRF_BAK  = {y1:1453,y2:1535,x1:383,x2:450};
 
-// IDs de template/máscara (fijos, ya subidos a TopView)
-const TEMPLATE_FRONT = '7d7621e822644dd6ad2a997c4c71c609';
-const TEMPLATE_BACK  = '6a4e9340ec364a60a75bf22cd13604ae';
-const MASK_FRONT     = '38baaeb1c16f4ec1ab994b94b69820f0';
-const MASK_BACK      = '03b2ad6a11a44c7283e7cfac5e2733d5';
+let frontDataUrl = null, backDataUrl = null;
 
-// ── Resize antes de enviar (Vercel limit ~4.5MB) ──────────────────
-const MAX_DIM = 1400;
-function resizeCanvas(src) {
-  const {width:w,height:h} = src;
-  if (w<=MAX_DIM && h<=MAX_DIM) return src;
+// ─── Status helpers ───────────────────────────────────────────────
+function st(msg,err=false){
+  const el=document.getElementById('status');
+  el.textContent=msg; el.className=err?'err':'';
+}
+
+// ─── Resize canvas ────────────────────────────────────────────────
+function resize(src){
+  const w=src.width,h=src.height;
+  if(w<=MAX_DIM&&h<=MAX_DIM) return src;
   const s=MAX_DIM/Math.max(w,h);
   const c=document.createElement('canvas');
   c.width=Math.round(w*s); c.height=Math.round(h*s);
@@ -100,111 +127,112 @@ function resizeCanvas(src) {
   return c;
 }
 
-// ── PSD parsing ───────────────────────────────────────────────────
-function findLayer(children,name){return(children||[]).find(c=>c.name===name)||null;}
-function findNested(root,...path){let cur=root;for(const s of path){cur=findLayer(cur.children,s);if(!cur)return null;}return cur;}
-// ── Blanquear remera: el Main Object gris → blanco ────────────────
-function whitenCanvas(canvas) {
+// ─── Blanquear remera gris → blanca ──────────────────────────────
+function whiten(canvas){
   const ctx=canvas.getContext('2d');
   const id=ctx.getImageData(0,0,canvas.width,canvas.height);
   const d=id.data;
-  // Encontrar min/max de pixels de la tela (claros, no stamps oscuros)
   let mn=255,mx=0;
   for(let i=0;i<d.length;i+=4){
-    if(d[i+3]>10 && d[i]>120 && d[i+1]>120 && d[i+2]>120){
+    if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
       const v=(d[i]+d[i+1]+d[i+2])/3;
       if(v<mn)mn=v; if(v>mx)mx=v;
     }
   }
-  if(mx<=mn) return canvas;
+  if(mx<=mn) return;
   const range=mx-mn;
   for(let i=0;i<d.length;i+=4){
-    if(d[i+3]>10 && d[i]>120 && d[i+1]>120 && d[i+2]>120){
-      d[i]  =Math.round(200+(d[i]  -mn)/range*55);
-      d[i+1]=Math.round(200+(d[i+1]-mn)/range*55);
-      d[i+2]=Math.round(200+(d[i+2]-mn)/range*55);
+    if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
+      d[i]  =Math.min(255,Math.round(200+(d[i]  -mn)/range*55));
+      d[i+1]=Math.min(255,Math.round(200+(d[i+1]-mn)/range*55));
+      d[i+2]=Math.min(255,Math.round(200+(d[i+2]-mn)/range*55));
     }
   }
   ctx.putImageData(id,0,0);
-  return canvas;
 }
 
-function compositeShirt(W,H,mainObj,stampLayer){
-  const c=document.createElement('canvas');c.width=W;c.height=H;
-  const ctx=c.getContext('2d');
-  if(mainObj?.canvas)ctx.drawImage(mainObj.canvas,mainObj.left||0,mainObj.top||0);
-  const draw=l=>{if(!l)return;if(l.canvas)ctx.drawImage(l.canvas,l.left||0,l.top||0);(l.children||[]).forEach(draw);};
-  draw(stampLayer);
-  if(!mainObj)return c;
-  const crop=document.createElement('canvas');
-  const {left:l=0,top:t=0,right:r=W,bottom:b=H}=mainObj;
-  crop.width=r-l;crop.height=b-t;
-  crop.getContext('2d').drawImage(c,-l,-t);
-  whitenCanvas(crop);    // blanquear tela gris → blanco
-  return resizeCanvas(crop);
+// ─── PSD parsing ─────────────────────────────────────────────────
+function findL(list,name){return(list||[]).find(l=>l.name===name)||null;}
+function findN(root,...path){
+  let cur=root;
+  for(const s of path){cur=findL(cur.children,s);if(!cur)return null;}
+  return cur;
 }
-async function extractFromPSD(file){
+
+function drawStamp(ctx,layer){
+  if(!layer)return;
+  if(layer.canvas)ctx.drawImage(layer.canvas,layer.left||0,layer.top||0);
+  (layer.children||[]).forEach(c=>drawStamp(ctx,c));
+}
+
+function buildShirtCanvas(W,H,mainObj,stamp){
+  const c=document.createElement('canvas');
+  c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  if(mainObj?.canvas) ctx.drawImage(mainObj.canvas,mainObj.left||0,mainObj.top||0);
+  drawStamp(ctx,stamp);
+  const crop=document.createElement('canvas');
+  const {left:l=0,top:t=0,right:r=W,bottom:b=H}=mainObj||{};
+  crop.width=r-l; crop.height=b-t;
+  crop.getContext('2d').drawImage(c,-l,-t);
+  whiten(crop);
+  return resize(crop);
+}
+
+async function readPSD(file){
+  st('Leyendo PSD…');
   const buf=await file.arrayBuffer();
   const psd=agPsd.readPsd(buf,{skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
-  const W=psd.width,H=psd.height;
-  const leftMain =findNested(psd,'Working Process','Left Shirt','Objects','Main Object');
-  const rightMain=findNested(psd,'Working Process','Right Shirt','Objects','Main Object');
-  const eFront=findLayer(psd.children,'Estampa Frontal');
-  const eBack =findLayer(psd.children,'Estampa Espalda');
-  const fC=compositeShirt(W,H,leftMain,eFront);
-  const bC=compositeShirt(W,H,rightMain,eBack);
-  console.log(`Front ${fC.width}x${fC.height}, Back ${bC.width}x${bC.height}`);
-  return{front:fC.toDataURL('image/jpeg',.92),back:bC.toDataURL('image/jpeg',.92)};
+  const W=psd.width, H=psd.height;
+  const lMain =findN(psd,'Working Process','Left Shirt','Objects','Main Object');
+  const rMain =findN(psd,'Working Process','Right Shirt','Objects','Main Object');
+  const eFront=findL(psd.children,'Estampa Frontal');
+  const eBack =findL(psd.children,'Estampa Espalda');
+  if(!lMain||!rMain) throw new Error('No se encontraron layers Left/Right Shirt');
+  const fC=buildShirtCanvas(W,H,lMain,eFront);
+  const bC=buildShirtCanvas(W,H,rMain,eBack);
+  const kb=c=>Math.round(c.toDataURL('image/jpeg',.92).length*.75/1024);
+  st(`✓ PSD leído — frente ~${kb(fC)}KB · espalda ~${kb(bC)}KB`);
+  return {
+    front: fC.toDataURL('image/jpeg',.92),
+    back:  bC.toDataURL('image/jpeg',.92),
+  };
 }
 
-// ── Centering: detectar offset y centrar imagen ────────────────────
-function detectOffset(imgData) {
-  const {data:d,width:w,height:h}=imgData;
-  // Fondo: promedio de esquinas
-  const corners=[
-    (d[30*w*4]+d[30*w*4+1]+d[30*w*4+2])/3,
-    (d[(30*w+w-30)*4]+(d[(30*w+w-30)*4+1])+d[(30*w+w-30)*4+2])/3,
-  ];
-  const fondo=(corners[0]+corners[1])/2;
+// ─── Centering ───────────────────────────────────────────────────
+function detectOff(d,w,h){
+  // Fondo: promedio de cuatro esquinas
+  const avg=(x,y)=>{const i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;};
+  const fondo=(avg(20,20)+avg(w-20,20)+avg(20,h-20)+avg(w-20,h-20))/4;
   const centers=[];
-  // Escanear desde 45% hasta 80% (incluye zona del torso)
-  for(let y=Math.floor(h*.45);y<Math.floor(h*.80);y+=20){
-    let left=-1,right=-1;
-    for(let x=0;x<w;x++){
-      const i=(y*w+x)*4;
-      if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){left=x;break;}
-    }
-    for(let x=w-1;x>=0;x--){
-      const i=(y*w+x)*4;
-      if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){right=x;break;}
-    }
-    if(left>0&&right>0&&right-left>w*0.3) centers.push((left+right)/2);
+  for(let y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15){
+    let l=-1,r=-1;
+    for(let x=0;x<w;x++){const i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){l=x;break;}}
+    for(let x=w-1;x>=0;x--){const i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){r=x;break;}}
+    if(l>0&&r>0&&r-l>w*.25) centers.push((l+r)/2);
   }
   if(!centers.length) return 0;
   const sorted=centers.slice().sort((a,b)=>a-b);
   const med=sorted[Math.floor(sorted.length/2)];
-  console.log('Model centers:', sorted.map(v=>Math.round(v)), 'median:', Math.round(med));
-  return Math.round(med - w/2);
+  console.log('offset detected:',Math.round(med-w/2),'px  (centers sample:',sorted.slice(0,5).map(v=>Math.round(v)).join(','),')');
+  return Math.round(med-w/2);
 }
 
-function centerCanvas(canvas, ctx, offset) {
-  if(Math.abs(offset)<10) return;          // sin shift si ya está bien
+function center(canvas,ctx,off){
+  if(Math.abs(off)<8) return;
   const tmp=document.createElement('canvas');
   tmp.width=canvas.width; tmp.height=canvas.height;
   tmp.getContext('2d').drawImage(canvas,0,0);
-
-  // Fondo: color de la esquina
-  const bg=ctx.getImageData(30,30,1,1).data;
+  // fill background
+  const bg=ctx.getImageData(20,20,1,1).data;
   ctx.fillStyle=`rgb(${bg[0]},${bg[1]},${bg[2]})`;
   ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // Dibujar contenido desplazado
-  ctx.drawImage(tmp,-offset,0);            // shift left = dibujar en -offset
+  ctx.drawImage(tmp,-off,0);
 }
 
-// ── Post-proceso ──────────────────────────────────────────────────
-function removeArtifact(imgData,y1,y2,x1,x2,rows=15){
-  const {data:d,width:w,height:h}=imgData;
+// ─── Remove artifact (interpolate above/below) ───────────────────
+function removeArt(id,y1,y2,x1,x2,rows=15){
+  const {data:d,width:w,height:h}=id;
   const above=[],below=[];
   for(let x=x1;x<x2;x++){
     let r=0,g=0,b=0,n=0;
@@ -217,180 +245,176 @@ function removeArtifact(imgData,y1,y2,x1,x2,rows=15){
   const rh=y2-y1;
   for(let row=0;row<rh;row++){
     const t=rh>1?row/(rh-1):0;
-    for(let col=0;col<(x2-x1);col++){
+    for(let col=0;col<x2-x1;col++){
       const i=((y1+row)*w+(x1+col))*4;
       d[i]  =Math.round(above[col][0]*(1-t)+below[col][0]*t);
       d[i+1]=Math.round(above[col][1]*(1-t)+below[col][1]*t);
       d[i+2]=Math.round(above[col][2]*(1-t)+below[col][2]*t);
     }
   }
-  return imgData;
+  return id;
 }
+
+// ─── Post-process ────────────────────────────────────────────────
 async function postProcess(imgUrl,isFront){
   return new Promise((resolve,reject)=>{
-    const img=new Image();img.crossOrigin='anonymous';
-    img.onload=async()=>{
+    const img=new Image(); img.crossOrigin='anonymous';
+    img.onerror=()=>reject(new Error('No se pudo cargar imagen resultado'));
+    img.onload=()=>{
       const c=document.getElementById('work-canvas');
-      c.width=img.width;c.height=img.height;
-      const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+      c.width=img.width; c.height=img.height;
+      const ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0);
 
-      // 1. Detectar y centrar el modelo
-      const rawData=ctx.getImageData(0,0,c.width,c.height);
-      const offset=detectOffset(rawData);
-      console.log(`${isFront?'Frente':'Espalda'} offset: ${offset>0?'+':''}${offset}px`);
-      centerCanvas(c,ctx,offset);
+      // 1. Centrar
+      const raw=ctx.getImageData(0,0,c.width,c.height);
+      const off=detectOff(raw.data,c.width,c.height);
+      center(c,ctx,off);
 
-      // 2. Post-proceso en la imagen ya centrada
-      let d=ctx.getImageData(0,0,c.width,c.height);
       if(isFront){
-        // Remover etiqueta interna del cuello
-        d=removeArtifact(d,POST.LABEL.y1,POST.LABEL.y2,POST.LABEL.x1,POST.LABEL.x2);
-        ctx.putImageData(d,0,0);
-        // Agregar grifa en manga (posición calibrada para imagen centrada)
+        // 2. Remover etiqueta interna
+        let id=ctx.getImageData(0,0,c.width,c.height);
+        id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);
+        ctx.putImageData(id,0,0);
+        // 3. Agregar grifa (manga derecha)
         const g=new Image();
-        g.onload=()=>{ctx.drawImage(g,POST.GRIFA_FRONT.x,POST.GRIFA_FRONT.y);resolve(c.toDataURL('image/jpeg',.95));};
-        g.onerror=reject;g.src=GRIFA_DATA_URL;
-      }else{
-        // En espalda: solo centar (sin grifa, sin etiqueta)
+        g.onload=()=>{
+          ctx.drawImage(g,GRF.x,GRF.y);
+          resolve(c.toDataURL('image/jpeg',.95));
+        };
+        g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95)); // continuar sin grifa si falla
+        g.src=GRIFA;
+      } else {
         resolve(c.toDataURL('image/jpeg',.95));
       }
     };
-    img.onerror=reject;img.src=imgUrl;
+    img.src=imgUrl;
   });
 }
 
-// ── API calls ─────────────────────────────────────────────────────
-async function apiPost(queryParam, body) {
-  const res=await fetch(`/api/topview?${queryParam}`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  });
-  const text=await res.text();
-  try{return JSON.parse(text);}
-  catch{throw new Error(`Servidor HTTP ${res.status}: ${text.slice(0,200)}`);}
+// ─── API calls ────────────────────────────────────────────────────
+async function apiPost(q,body){
+  const res=await fetch(`/api/topview?${q}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const txt=await res.text();
+  try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
+}
+async function apiGet(q){
+  const res=await fetch(`/api/topview?${q}`);
+  const txt=await res.text();
+  try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,200)}`);}
 }
 
-async function apiGet(queryParam) {
-  const res=await fetch(`/api/topview?${queryParam}`);
-  const text=await res.text();
-  try{return JSON.parse(text);}
-  catch{throw new Error(`Servidor HTTP ${res.status}: ${text.slice(0,200)}`);}
-}
-
-async function uploadImage(base64) {
-  const d=await apiPost('upload=1',{imageBase64:base64});
+async function upload(b64){
+  const d=await apiPost('upload=1',{imageBase64:b64});
   if(!d.ok) throw new Error('Upload: '+(d.error||JSON.stringify(d)));
   return d.fileId;
 }
-
-async function submitTask(productFileId, templateFileId, maskFileId) {
-  const d=await apiPost('submit=1',{
-    productImageFileId:  productFileId,
-    templateImageFileId: templateFileId,
-    templateMaskFileId:  maskFileId,
-  });
+async function submit(productFileId,tmplId,maskId){
+  const d=await apiPost('submit=1',{productImageFileId:productFileId,templateImageFileId:tmplId,templateMaskFileId:maskId});
   if(!d.ok) throw new Error('Submit: '+(d.error||JSON.stringify(d)));
   return d.taskId;
 }
-
-async function pollTask(taskId, onStatus) {
+async function poll(taskId,cb){
   for(let i=0;i<80;i++){
     await new Promise(r=>setTimeout(r,3000));
     const d=await apiGet(`query=${encodeURIComponent(taskId)}`);
     if(d.code!=='200') throw new Error('Query: '+JSON.stringify(d));
-    // result puede estar en d.result o directo en d
     const r=d.result||d;
-    const s=r.status;
-    if(onStatus)onStatus(s,i);
-    if(s==='success'){
+    if(cb) cb(r.status||'?',i);
+    if(r.status==='success'){
       const url=(r.anyfitImages||[])[0]?.url;
-      if(!url) throw new Error('Sin URL: '+JSON.stringify(d));
+      if(!url) throw new Error('Sin URL en resultado: '+JSON.stringify(d));
       return url;
     }
-    if(s==='fail'||s==='failed') throw new Error('Fallida: '+(r.errorMsg||'sin detalle'));
+    if(r.status==='fail'||r.status==='failed') throw new Error('Fallida: '+(r.errorMsg||'?'));
   }
   throw new Error('Timeout');
 }
 
-// ── UI ────────────────────────────────────────────────────────────
-let eFront=null,eBack=null;
-function setStatus(msg,isError=false){
-  const el=document.getElementById('status');el.textContent=msg;el.className=isError?'error':'';
-}
-
-async function onFileSelected(file){
-  if(!file)return;
-  setStatus(file.name.endsWith('.psd')?'Leyendo PSD…':'Procesando imagen…');
-  document.getElementById('generate-btn').disabled=true;
-  try{
-    if(file.name.toLowerCase().endsWith('.psd'))
-      ({front:eFront,back:eBack}=await extractFromPSD(file));
-    else {
-      // Fallback: subir imagen sin cortar (asume que el usuario sube frente y espalda por separado)
-      eFront=eBack=URL.createObjectURL(file);
-    }
-    document.getElementById('preview-front').src=eFront;
-    document.getElementById('preview-back').src=eBack||eFront;
-    document.getElementById('preview-row').style.display='flex';
-    document.getElementById('generate-btn').disabled=false;
-    const kb=s=>Math.round((s?.length||0)*.75/1024);
-    setStatus(`✓ PSD leído — frente ~${kb(eFront)}KB · espalda ~${kb(eBack)}KB`);
-  }catch(err){console.error(err);setStatus('Error: '+err.message,true);}
-}
-
-document.getElementById('generate-btn').addEventListener('click',async()=>{
-  if(!eFront||!eBack)return;
-  const btn=document.getElementById('generate-btn');
+// ─── Generate ─────────────────────────────────────────────────────
+async function generate(){
+  if(!frontDataUrl||!backDataUrl) return;
+  const btn=document.getElementById('gen-btn');
   btn.disabled=true;
   document.getElementById('results').style.display='none';
   try{
-    const toB64=url=>url.split(',')[1];
+    const b64=url=>url.split(',')[1];
 
-    setStatus('Subiendo frente a TopView…');
-    const frontFileId=await uploadImage(toB64(eFront));
+    st('Subiendo frente…');
+    const fId=await upload(b64(frontDataUrl));
 
-    setStatus('Subiendo espalda a TopView…');
-    const backFileId=await uploadImage(toB64(eBack));
+    st('Subiendo espalda…');
+    const bId=await upload(b64(backDataUrl));
 
-    setStatus('Creando tareas…');
-    const [frontTaskId,backTaskId]=await Promise.all([
-      submitTask(frontFileId, TEMPLATE_FRONT, MASK_FRONT),
-      submitTask(backFileId,  TEMPLATE_BACK,  MASK_BACK),
+    st('Creando tareas…');
+    const [fTask,bTask]=await Promise.all([submit(fId,TMPL_F,MASK_F),submit(bId,TMPL_B,MASK_B)]);
+
+    st('Generando (30–60s)…');
+    const [fUrl,bUrl]=await Promise.all([
+      poll(fTask,(s,i)=>st(`Generando… ${i*3}s — frente:${s}`)),
+      poll(bTask),
     ]);
 
-    setStatus('Generando mockups… (30–60s)');
-    const [frontUrl,backUrl]=await Promise.all([
-      pollTask(frontTaskId,(s,i)=>setStatus(`Generando… (${i*3}s) — frente:${s}`)),
-      pollTask(backTaskId),
-    ]);
-
-    setStatus('Aplicando post-proceso…');
+    st('Post-proceso…');
     const [fp,bp]=await Promise.all([
-      postProcess(`/api/topview?proxy=${encodeURIComponent(frontUrl)}`,true),
-      postProcess(`/api/topview?proxy=${encodeURIComponent(backUrl)}`,false),
+      postProcess(`/api/topview?proxy=${encodeURIComponent(fUrl)}`,true),
+      postProcess(`/api/topview?proxy=${encodeURIComponent(bUrl)}`,false),
     ]);
 
     document.getElementById('result-front').src=fp;
     document.getElementById('result-back').src=bp;
     document.getElementById('dl-front').href=fp;
     document.getElementById('dl-back').href=bp;
-    document.getElementById('results').style.display='grid';
-    setStatus('✓ Listo');
-  }catch(err){console.error(err);setStatus('Error: '+err.message,true);}
+    document.getElementById('results').style.display='flex';
+    st('✓ Listo');
+  }catch(err){
+    console.error(err);
+    st('Error: '+err.message,true);
+  }
   btn.disabled=false;
+}
+
+// ─── File input ───────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change',async function(){
+  const file=this.files[0];
+  if(!file)return;
+  document.getElementById('gen-btn').disabled=true;
+  try{
+    const {front,back}=await readPSD(file);
+    frontDataUrl=front; backDataUrl=back;
+    document.getElementById('preview-front').src=front;
+    document.getElementById('preview-back').src=back;
+    document.getElementById('preview-row').style.display='flex';
+    document.getElementById('gen-btn').disabled=false;
+  }catch(err){
+    console.error(err);
+    st('Error al leer PSD: '+err.message,true);
+  }
+  this.value=''; // reset para poder subir el mismo archivo de nuevo
 });
 
-document.getElementById('file-input').addEventListener('change',e=>onFileSelected(e.target.files[0]));
+// ─── Drag & drop ──────────────────────────────────────────────────
 const dz=document.getElementById('drop-zone');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
-dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
-dz.addEventListener('drop',e=>{
-  e.preventDefault();dz.classList.remove('drag-over');
-  const f=e.dataTransfer.files[0];if(!f)return;
-  const dt=new DataTransfer();dt.items.add(f);
-  document.getElementById('file-input').files=dt.files;onFileSelected(f);
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('active');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('active'));
+dz.addEventListener('drop',async e=>{
+  e.preventDefault(); dz.classList.remove('active');
+  const f=e.dataTransfer.files[0];
+  if(!f)return;
+  document.getElementById('gen-btn').disabled=true;
+  try{
+    const {front,back}=await readPSD(f);
+    frontDataUrl=front; backDataUrl=back;
+    document.getElementById('preview-front').src=front;
+    document.getElementById('preview-back').src=back;
+    document.getElementById('preview-row').style.display='flex';
+    document.getElementById('gen-btn').disabled=false;
+  }catch(err){
+    console.error(err);
+    st('Error al leer PSD: '+err.message,true);
+  }
 });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js" onerror="document.getElementById('status').textContent='Error: no se pudo cargar ag-psd. Verificá tu conexión.';document.getElementById('status').className='err'"></script>
 </body>
 </html>
