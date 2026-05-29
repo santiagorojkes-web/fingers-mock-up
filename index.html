@@ -294,15 +294,24 @@ async function apiGet(q){const res=await fetch(`/api/topview?${q}`);const txt=aw
 async function upload(b64){const d=await apiPost('upload=1',{imageBase64:b64});if(!d.ok)throw new Error('Upload: '+(d.error||JSON.stringify(d)));return d.fileId;}
 async function submit(p,t,m){const d=await apiPost('submit=1',{productImageFileId:p,templateImageFileId:t,templateMaskFileId:m});if(!d.ok)throw new Error('Submit: '+(d.error||JSON.stringify(d)));return d.taskId;}
 async function poll(taskId,cb){
-  for(let i=0;i<80;i++){
+  for(let i=0;i<40;i++){
     await new Promise(r=>setTimeout(r,3000));
-    const d=await apiGet(`query=${encodeURIComponent(taskId)}`);
-    if(d.code!=='200')throw new Error('Query: '+JSON.stringify(d));
-    const r=d.result||d;if(cb)cb(r.status||'?',i);
-    if(r.status==='success'){const url=(r.anyfitImages||[])[0]?.url;if(!url)throw new Error('Sin URL');return url;}
-    if(r.status==='fail'||r.status==='failed')throw new Error('Fallida');
+    let d;
+    try{ d=await apiGet(`query=${encodeURIComponent(taskId)}`); }
+    catch(e){ console.warn('poll error',e); continue; }
+    if(d.code!=='200') throw new Error('TopView error: '+JSON.stringify(d).slice(0,300));
+    const r=d.result||d;
+    const s=r.status||'?';
+    if(cb)cb(s,i);
+    console.log(`Poll ${i+1}/40 status=${s}`,JSON.stringify(r).slice(0,200));
+    if(s==='success'){
+      const url=(r.anyfitImages||[])[0]?.url;
+      if(!url)throw new Error('Sin URL: '+JSON.stringify(d).slice(0,200));
+      return url;
+    }
+    if(s==='fail'||s==='failed') throw new Error('Tarea fallida: '+(r.errorMsg||r.error||JSON.stringify(r).slice(0,150)));
   }
-  throw new Error('Timeout');
+  throw new Error('Timeout: la tarea no completó en 2 minutos. Intentá de nuevo.');
 }
 
 async function generate(){
