@@ -19,7 +19,7 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
 .upload-btn{display:inline-block;margin-top:16px;padding:10px 28px;background:var(--accent);color:#000;border:none;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;cursor:pointer;border-radius:2px}
 .upload-btn:hover{background:#d4ff33}
 #file-input{display:none}
-.info{background:#001a00;border:1px solid #004400;border-radius:4px;padding:12px 16px;font-size:11px;color:#44cc44;margin:0 auto 20px;max-width:640px;display:none}
+.warn{background:#1a1200;border:1px solid #554400;border-radius:4px;padding:12px 16px;font-size:11px;color:#cc9900;margin:0 auto 20px;max-width:640px;display:none}
 #preview-row{display:none;gap:16px;max-width:640px;margin:0 auto 28px}
 .preview-box{flex:1}
 .preview-img{aspect-ratio:3/4;background:#111;border:1px solid var(--border);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -44,13 +44,14 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
 <div class="upload-area" id="drop-zone">
   <div class="upload-icon">⊕</div>
   <div class="upload-title">Subir archivo PSD</div>
-  <div class="upload-hint">Soporta estampas pixel y vectoriales (shape layers)</div>
+  <div class="upload-hint">El PSD debe tener las estampas como capas de pixel (no vectoriales)</div>
   <button class="upload-btn" onclick="document.getElementById('file-input').click()">Seleccionar archivo</button>
   <input type="file" id="file-input" accept=".psd">
 </div>
 
-<div class="info" id="info-server">
-  ✓ Estampas vectoriales detectadas — procesando en servidor (psd-tools)
+<div class="warn" id="warn-vector">
+  ⚠️ <strong>Estampas vectoriales detectadas.</strong> Las capas de tipo shape/vector no pueden renderizarse en el browser. 
+  Para que funcionen correctamente: en Photoshop, seleccioná todas las capas de estampa → Layer › Rasterize › Layer. Guardá y volvé a subir.
 </div>
 
 <div id="preview-row" style="display:none;flex-direction:row;gap:16px;max-width:640px;margin:0 auto 28px">
@@ -139,9 +140,8 @@ function drawLayer(ctx,layer){
   (layer.children||[]).forEach(c=>drawLayer(ctx,c));
 }
 
-// ─── RUTA 1: ag-psd en browser (pixel layers) ───────────────────────
-async function readPSD_browser(file){
-  st('Leyendo PSD en browser…');
+async function readPSD(file){
+  st('Leyendo PSD…');
   const buf=await file.arrayBuffer();
   const psd=agPsd.readPsd(buf,{
     skipLayerImageData:false,
@@ -154,23 +154,26 @@ async function readPSD_browser(file){
   const rM=findN(psd,'Working Process','Right Shirt','Objects','Main Object');
   if(!lM||!rM)throw new Error('No se encontraron Left/Right Shirt');
 
+  // Detectar si hay estampas vectoriales (sin pixel data)
   const eF=findL(psd.children,'Estampa Frontal');
   const eB=findL(psd.children,'Estampa Espalda');
-
-  // Detectar vectoriales
-  const hasVectorF = eF && !hasPixelData(eF);
-  const hasVectorB = eB && !hasPixelData(eB);
-  if(hasVectorF||hasVectorB) return null; // señal para usar servidor
+  const hasVectorStamps=(eF&&!hasPixelData(eF))||(eB&&!hasPixelData(eB));
+  document.getElementById('warn-vector').style.display=hasVectorStamps?'block':'none';
 
   function buildShirt(mainObj,stamp){
     const c=document.createElement('canvas');c.width=W;c.height=H;
     const ctx=c.getContext('2d');
+    // Fondo blanco para que la remera sea visible en preview
     ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,W,H);
+    // Dibujar remera base
     drawLayer(ctx,mainObj);
+    // Dibujar estampa (solo si tiene pixel data)
     if(stamp&&hasPixelData(stamp))drawLayer(ctx,stamp);
+    // Crop a bbox de la remera
     const{left:l,top:t,right:r,bottom:b}=mainObj;
     const crop=document.createElement('canvas');
     crop.width=r-l;crop.height=b-t;
+    // Fondo blanco en el crop también
     const cctx=crop.getContext('2d');
     cctx.fillStyle='#ffffff';cctx.fillRect(0,0,crop.width,crop.height);
     cctx.drawImage(c,-l,-t);
@@ -178,8 +181,11 @@ async function readPSD_browser(file){
     return resize(crop);
   }
 
+  // Para front: también borrar la grifa de la zona del shirt
   const grifaLayer=findL(psd.children,'Grifa Frente');
+
   const fC=buildShirt(lM,eF);
+  // Borrar grifa del front (la agregamos en post-proceso con la original)
   if(grifaLayer&&lM){
     const gx=(grifaLayer.left-lM.left)*(fC.width/(lM.right-lM.left));
     const gy=(grifaLayer.top-lM.top)*(fC.height/(lM.bottom-lM.top));
@@ -189,53 +195,13 @@ async function readPSD_browser(file){
     ctx.fillStyle='#ffffff';
     ctx.fillRect(Math.max(0,gx-3),Math.max(0,gy-3),gw+6,gh+6);
   }
+
   const bC=buildShirt(rM,eB);
 
   const kb=c=>Math.round(c.toDataURL('image/jpeg',.92).length*.75/1024);
-  st(`✓ PSD leído (browser) · frente ~${kb(fC)}KB · espalda ~${kb(bC)}KB`);
+  st(`✓ PSD leído${hasVectorStamps?' — ⚠️ estampas vectoriales':''} · frente ~${kb(fC)}KB · espalda ~${kb(bC)}KB`);
+
   return{front:fC.toDataURL('image/jpeg',.92),back:bC.toDataURL('image/jpeg',.92)};
-}
-
-// ─── RUTA 2: psd-tools en servidor Python (/api/psd) ────────────────
-async function readPSD_server(file){
-  st('Enviando PSD al servidor (shape layers detectadas)…');
-  document.getElementById('info-server').style.display='block';
-
-  const formData=new FormData();
-  formData.append('file',file,'upload.psd');
-
-  const res=await fetch('/api/psd',{method:'POST',body:formData});
-  if(!res.ok){
-    const txt=await res.text();
-    throw new Error(`Servidor PSD error ${res.status}: ${txt.slice(0,300)}`);
-  }
-  const data=await res.json();
-  if(data.error) throw new Error('Servidor: '+data.error);
-  if(!data.front||!data.back) throw new Error('Servidor no devolvió imágenes');
-
-  st(`✓ PSD procesado en servidor · frente OK · espalda OK`);
-  return{
-    front:'data:image/jpeg;base64,'+data.front,
-    back:'data:image/jpeg;base64,'+data.back
-  };
-}
-
-// ─── RUTA PRINCIPAL: intenta browser, cae a servidor si hay shapes ──
-async function readPSD(file){
-  // Primero intentar browser (rápido, sin límite de tamaño de respuesta)
-  try{
-    const result=await readPSD_browser(file);
-    if(result!==null){
-      document.getElementById('info-server').style.display='none';
-      return result;
-    }
-    // null = hay shapes → usar servidor
-    return await readPSD_server(file);
-  }catch(e){
-    // Si el browser explota por otra razón, intentar servidor igual
-    console.warn('Browser PSD falló, probando servidor:',e.message);
-    return await readPSD_server(file);
-  }
 }
 
 // Centering
@@ -305,6 +271,7 @@ async function postProcess(imgUrl,isFront){
         let id=ctx.getImageData(0,0,c.width,c.height);
         id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);
         ctx.putImageData(id,0,0);
+        // Detectar manga derecha (viewer right = modelo's left arm)
         const centId=ctx.getImageData(0,0,c.width,c.height);
         const cF=(centId.data[20*4]+centId.data[20*4+1]+centId.data[20*4+2])/3*0.5
                +(centId.data[(20*c.width+(c.width-20))*4]+centId.data[(20*c.width+(c.width-20))*4+1]+centId.data[(20*c.width+(c.width-20))*4+2])/3*0.5;
@@ -320,6 +287,7 @@ async function postProcess(imgUrl,isFront){
         const g=new Image();
         g.onload=()=>{
           const gX=slvEdge-g.width;
+          console.log('sleeve:',slvEdge,'grifa:',gX,gY);
           ctx.drawImage(g,gX,gY);
           resolve(c.toDataURL('image/jpeg',.95));
         };
@@ -401,7 +369,7 @@ async function generate(){
 async function onFile(file){
   if(!file)return;
   document.getElementById('gen-btn').disabled=true;
-  document.getElementById('info-server').style.display='none';
+  document.getElementById('warn-vector').style.display='none';
   try{
     const{front,back}=await readPSD(file);
     frontDataUrl=front;backDataUrl=back;
