@@ -95,7 +95,7 @@ async function loadPy() {
     const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/' });
     await py.loadPackage(['micropip', 'pillow', 'numpy']);
     await py.runPythonAsync(`import micropip
-await micropip.install('psd-tools')`);
+await micropip.install('psd-tools', keep_going=True)`);
     pyodide = py;
     return py;
   })();
