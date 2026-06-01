@@ -125,11 +125,12 @@ function readPSDagPsd(buf){
   const gL=findL(psd.children,'Grifa Frente');
   const hasVec=(eF&&!hasPixelData(eF))||(eB&&!hasPixelData(eB));
 
-  function buildShirt(mainObj,stamp){
+  function buildShirt(mainObj,shirtGroup,stamp){
     const c=document.createElement('canvas');c.width=W;c.height=H;
     const ctx=c.getContext('2d');
     ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,W,H);
-    drawLayer(ctx,mainObj);
+    // Dibujar el grupo completo (color + sombras + efectos)
+    drawLayer(ctx,shirtGroup);
     if(stamp&&hasPixelData(stamp))drawLayer(ctx,stamp);
     const{left:l,top:t,right:r,bottom:b}=mainObj;
     const crop=document.createElement('canvas');crop.width=r-l;crop.height=b-t;
@@ -137,15 +138,19 @@ function readPSDagPsd(buf){
     cctx.drawImage(c,-l,-t);whiten(crop);return resize(crop);
   }
 
-  const fC=buildShirt(lM,eF);
+  const lG=findN(psd,'Working Process','Left Shirt');
+  const rG=findN(psd,'Working Process','Right Shirt');
+  const fC=buildShirt(lM,lG||{children:[]},eF);
   // Borrar grifa del front
   if(gL&&lM){
     const sx=fC.width/(lM.right-lM.left),sy=fC.height/(lM.bottom-lM.top);
     const gx=(gL.left-lM.left)*sx,gy=(gL.top-lM.top)*sy;
     const gw=(gL.right-gL.left)*sx,gh=(gL.bottom-gL.top)*sy;
-    fC.getContext('2d').fillStyle='#ffffff';fC.getContext('2d').fillRect(gx-3,gy-3,gw+6,gh+6);
+    fC.getContext('2d').fillStyle='rgba(255,255,255,0)';
+    // No borrar con blanco - dejar el color del grupo
+    // Solo necesitamos borrar si la grifa del PSD está en el area de la camisa
   }
-  const bC=buildShirt(rM,eB);
+  const bC=buildShirt(rM,rG||{children:[]},eB);
   return{front:fC.toDataURL('image/jpeg',.92),back:bC.toDataURL('image/jpeg',.92),hasVector:hasVec};
 }
 
@@ -197,11 +202,12 @@ def process(psd_bytes_js):
     eF=find_layer(list(psd),'Estampa Frontal')
     eB=find_layer(list(psd),'Estampa Espalda')
     gL=find_layer(list(psd),'Grifa Frente')
-    def build(main,stamp):
+    def build(shirt_group,main,stamp):
+        # Composite completo del grupo (color + sombras + efectos + todo)
         canvas=Image.new('RGBA',(W,H),(0,0,0,0))
-        shirt=main.topil().convert('RGBA')
-        arr=whiten(np.array(shirt))
-        canvas.paste(Image.fromarray(arr),(main.bbox[0],main.bbox[1]),Image.fromarray(arr))
+        sg=shirt_group.composite()
+        if sg:
+            canvas.paste(sg.convert('RGBA'),(shirt_group.bbox[0],shirt_group.bbox[1]),sg.convert('RGBA'))
         if stamp:
             simg=stamp.composite()
             if simg:
@@ -209,11 +215,13 @@ def process(psd_bytes_js):
                 if (sarr[:,:,3]>10).sum()>50:
                     canvas.paste(simg.convert('RGBA'),(stamp.bbox[0],stamp.bbox[1]),simg.convert('RGBA'))
         b=main.bbox; return canvas.crop((b[0],b[1],b[2],b[3]))
-    fc=build(lM,eF)
+    lG=find_nested(psd,'Working Process','Left Shirt')
+    rG=find_nested(psd,'Working Process','Right Shirt')
+    fc=build(lG,lM,eF)
     if gL and lM:
         fc.paste(Image.new('RGBA',(gL.right-gL.left+6,gL.bottom-gL.top+6),(255,255,255,255)),
                  (max(0,gL.left-lM.left-3),max(0,gL.top-lM.top-3)))
-    bc=build(rM,eB)
+    bc=build(rG,rM,eB)
     return to_b64(fc), to_b64(bc)
 `;
 
