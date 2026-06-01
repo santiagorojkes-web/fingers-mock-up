@@ -100,7 +100,7 @@ async function loadPy() {
     await new Promise(function(res, rej) { s.onload = res; s.onerror = function() { rej(new Error("No se pudo cargar Pyodide")); }; });
     var py = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" });
     st("Cargando dependencias Python...");
-    await py.loadPackage(["pillow", "numpy"]);
+    await py.loadPackage(["pillow", "numpy", "micropip"]);
     st("Instalando psd-tools...");
     await py.runPythonAsync(PY_SETUP);
     await py.runPythonAsync("import micropip");
