@@ -75,87 +75,37 @@ const MASK_B = '03b2ad6a11a44c7283e7cfac5e2733d5';
 const MAX_DIM = 1400;
 const LABEL  = {y1:1004,y2:1040,x1:1083,x2:1235};
 
-let frontDataUrl=null, backDataUrl=null;
-let pyodide=null, pyPromise=null;
+let frontDataUrl = null, backDataUrl = null;
+let pyodide = null, pyPromise = null;
 
-function st(msg,err=false){const el=document.getElementById('status');el.textContent=msg;el.className=err?'err':'';}
-
-// ── ag-psd helpers ────────────────────────────────────────────────
-function findL(list,name){return(list||[]).find(l=>l.name===name)||null;}
-function findN(root,...path){let cur=root;for(const s of path){cur=findL(cur.children,s);if(!cur)return null;}return cur;}
-function hasPixelData(layer){
-  if(!layer)return false;
-  if(layer.canvas||layer.imageData)return true;
-  return(layer.children||[]).some(c=>hasPixelData(c));
-}
-function drawLayer(ctx,layer){
-  if(!layer)return;
-  if(layer.canvas){ctx.drawImage(layer.canvas,layer.left||0,layer.top||0);return;}
-  if(layer.imageData){
-    const t=document.createElement('canvas');t.width=layer.imageData.width;t.height=layer.imageData.height;
-    t.getContext('2d').putImageData(layer.imageData,0,0);ctx.drawImage(t,layer.left||0,layer.top||0);return;
-  }
-  (layer.children||[]).forEach(c=>drawLayer(ctx,c));
-}
-function resize(src){
-  const w=src.width,h=src.height;if(w<=MAX_DIM&&h<=MAX_DIM)return src;
-  const s=MAX_DIM/Math.max(w,h),c=document.createElement('canvas');
-  c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;
-}
-function whiten(canvas){
-  const ctx=canvas.getContext('2d'),id=ctx.getImageData(0,0,canvas.width,canvas.height),d=id.data;
-  let mn=255,mx=0;
-  for(let i=0;i<d.length;i+=4)if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){const v=(d[i]+d[i+1]+d[i+2])/3;if(v<mn)mn=v;if(v>mx)mx=v;}
-  if(mx<=mn)return;const r=mx-mn;
-  for(let i=0;i<d.length;i+=4)if(d[i+3]>10&&d[i]>120&&d[i+1]>120&&d[i+2]>120){
-    d[i]=Math.min(255,Math.round(200+(d[i]-mn)/r*55));d[i+1]=Math.min(255,Math.round(200+(d[i+1]-mn)/r*55));d[i+2]=Math.min(255,Math.round(200+(d[i+2]-mn)/r*55));
-  }
-  ctx.putImageData(id,0,0);
+function st(msg, err=false) {
+  const el = document.getElementById('status');
+  el.textContent = msg; el.className = err ? 'err' : '';
 }
 
-// ── Leer PSD vía ag-psd (pixel layers) ───────────────────────────
-function readPSDagPsd(buf){
-  const psd=agPsd.readPsd(buf,{skipLayerImageData:false,useRawThumbnail:false,useImageData:false});
-  const W=psd.width,H=psd.height;
-  const lM=findN(psd,'Working Process','Left Shirt','Objects','Main Object');
-  const rM=findN(psd,'Working Process','Right Shirt','Objects','Main Object');
-  if(!lM||!rM)throw new Error('No se encontraron Left/Right Shirt');
-  const eF=findL(psd.children,'Estampa Frontal');
-  const eB=findL(psd.children,'Estampa Espalda');
-  const gL=findL(psd.children,'Grifa Frente');
-  const hasVec=(eF&&!hasPixelData(eF))||(eB&&!hasPixelData(eB));
-
-  function buildShirt(mainObj,shirtGroup,stamp){
-    const c=document.createElement('canvas');c.width=W;c.height=H;
-    const ctx=c.getContext('2d');
-    ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,W,H);
-    // Dibujar el grupo completo (color + sombras + efectos)
-    drawLayer(ctx,shirtGroup);
-    if(stamp&&hasPixelData(stamp))drawLayer(ctx,stamp);
-    const{left:l,top:t,right:r,bottom:b}=mainObj;
-    const crop=document.createElement('canvas');crop.width=r-l;crop.height=b-t;
-    const cctx=crop.getContext('2d');cctx.fillStyle='#ffffff';cctx.fillRect(0,0,crop.width,crop.height);
-    cctx.drawImage(c,-l,-t);whiten(crop);return resize(crop);
-  }
-
-  const lG=findN(psd,'Working Process','Left Shirt');
-  const rG=findN(psd,'Working Process','Right Shirt');
-  const fC=buildShirt(lM,lG||{children:[]},eF);
-  // Borrar grifa del front
-  if(gL&&lM){
-    const sx=fC.width/(lM.right-lM.left),sy=fC.height/(lM.bottom-lM.top);
-    const gx=(gL.left-lM.left)*sx,gy=(gL.top-lM.top)*sy;
-    const gw=(gL.right-gL.left)*sx,gh=(gL.bottom-gL.top)*sy;
-    fC.getContext('2d').fillStyle='rgba(255,255,255,0)';
-    // No borrar con blanco - dejar el color del grupo
-    // Solo necesitamos borrar si la grifa del PSD está en el area de la camisa
-  }
-  const bC=buildShirt(rM,rG||{children:[]},eB);
-  return{front:fC.toDataURL('image/jpeg',.92),back:bC.toDataURL('image/jpeg',.92),hasVector:hasVec};
+// ── Pyodide ──────────────────────────────────────────────────────
+async function loadPy() {
+  if (pyodide) return pyodide;
+  if (pyPromise) return pyPromise;
+  pyPromise = (async () => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js';
+    document.head.appendChild(s);
+    await new Promise((res, rej) => { s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar Pyodide')); });
+    const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/' });
+    await py.loadPackage(['micropip', 'pillow', 'numpy']);
+    await py.runPythonAsync(`import micropip
+await micropip.install('psd-tools')`);
+    pyodide = py;
+    return py;
+  })();
+  return pyPromise;
 }
 
-// ── Pyodide (solo para vector stamps) ────────────────────────────
-const PSD_PYTHON=`
+// ── Python PSD code ───────────────────────────────────────────────
+// psd-tools renderiza el PSD exactamente como Photoshop:
+// shirt_group.composite() = frente o espalda con color + estampas + sombras
+const PY = `
 import io, base64
 import numpy as np
 from psd_tools import PSDImage
@@ -165,6 +115,7 @@ def find_layer(layers, name):
     for l in layers:
         if l.name == name: return l
     return None
+
 def find_nested(root, *path):
     cur = root
     for s in path:
@@ -172,234 +123,302 @@ def find_nested(root, *path):
         if not cur: return None
     return cur
 
-def whiten(arr):
-    arr = arr.astype(np.float32)
-    a = arr[:,:,3]
-    for c in range(3):
-        ch = arr[:,:,c]
-        m = (a>10)&(ch>120)
-        if m.sum()>0:
-            mn,mx = ch[m].min(), ch[m].max()
-            ch[m] = 200+(ch[m]-mn)/max(mx-mn,1)*55
-        arr[:,:,c]=ch
-    return arr.astype(np.uint8)
+def to_jpeg_b64(img, max_dim=1400, quality=92):
+    w, h = img.size
+    if max(w, h) > max_dim:
+        s = max_dim / max(w, h)
+        img = img.resize((round(w*s), round(h*s)), Image.LANCZOS)
+    rgb = Image.new('RGB', img.size, (255, 255, 255))
+    if img.mode == 'RGBA':
+        rgb.paste(img, mask=img.split()[3])
+    else:
+        rgb.paste(img)
+    buf = io.BytesIO()
+    rgb.save(buf, 'JPEG', quality=quality)
+    return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
 
-def to_b64(img, max_dim=1400, q=92):
-    w,h = img.size
-    if max(w,h)>max_dim:
-        s=max_dim/max(w,h); img=img.resize((round(w*s),round(h*s)),Image.LANCZOS)
-    rgb=Image.new('RGB',img.size,(255,255,255))
-    if img.mode=='RGBA': rgb.paste(img,mask=img.split()[3])
-    else: rgb.paste(img)
-    buf=io.BytesIO(); rgb.save(buf,'JPEG',quality=q)
-    return 'data:image/jpeg;base64,'+base64.b64encode(buf.getvalue()).decode()
+def process(raw_bytes):
+    psd = PSDImage.open(io.BytesIO(bytes(raw_bytes)))
+    W, H = psd.width, psd.height
 
-def process(psd_bytes_js):
-    psd=PSDImage.open(io.BytesIO(bytes(psd_bytes_js)))
-    W,H=psd.width,psd.height
-    lM=find_nested(psd,'Working Process','Left Shirt','Objects','Main Object')
-    rM=find_nested(psd,'Working Process','Right Shirt','Objects','Main Object')
-    eF=find_layer(list(psd),'Estampa Frontal')
-    eB=find_layer(list(psd),'Estampa Espalda')
-    gL=find_layer(list(psd),'Grifa Frente')
-    def build(shirt_group,main,stamp):
-        # Composite completo del grupo (color + sombras + efectos + todo)
-        canvas=Image.new('RGBA',(W,H),(0,0,0,0))
-        sg=shirt_group.composite()
-        if sg:
-            canvas.paste(sg.convert('RGBA'),(shirt_group.bbox[0],shirt_group.bbox[1]),sg.convert('RGBA'))
+    # Grupos de remera
+    lShirt = find_nested(psd, 'Working Process', 'Left Shirt')
+    rShirt = find_nested(psd, 'Working Process', 'Right Shirt')
+    lMain  = find_nested(lShirt, 'Objects', 'Main Object')
+    rMain  = find_nested(rShirt, 'Objects', 'Main Object')
+    eF = find_layer(list(psd), 'Estampa Frontal')
+    eB = find_layer(list(psd), 'Estampa Espalda')
+    gL = find_layer(list(psd), 'Grifa Frente')
+
+    def build(shirt_group, main, stamp):
+        canvas = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        # composite() del grupo = renderizado completo identico al PSD
+        sg_img = shirt_group.composite()
+        if sg_img:
+            canvas.paste(sg_img.convert('RGBA'),
+                         (shirt_group.bbox[0], shirt_group.bbox[1]),
+                         sg_img.convert('RGBA'))
+        # Agregar estampa encima
         if stamp:
-            simg=stamp.composite()
-            if simg:
-                sarr=np.array(simg.convert('RGBA'))
-                if (sarr[:,:,3]>10).sum()>50:
-                    canvas.paste(simg.convert('RGBA'),(stamp.bbox[0],stamp.bbox[1]),simg.convert('RGBA'))
-        b=main.bbox; return canvas.crop((b[0],b[1],b[2],b[3]))
-    lG=find_nested(psd,'Working Process','Left Shirt')
-    rG=find_nested(psd,'Working Process','Right Shirt')
-    fc=build(lG,lM,eF)
-    if gL and lM:
-        fc.paste(Image.new('RGBA',(gL.right-gL.left+6,gL.bottom-gL.top+6),(255,255,255,255)),
-                 (max(0,gL.left-lM.left-3),max(0,gL.top-lM.top-3)))
-    bc=build(rG,rM,eB)
-    return to_b64(fc), to_b64(bc)
+            si = stamp.composite()
+            if si:
+                sa = np.array(si.convert('RGBA'))
+                if (sa[:,:,3] > 10).sum() > 50:
+                    canvas.paste(si.convert('RGBA'),
+                                 (stamp.bbox[0], stamp.bbox[1]),
+                                 si.convert('RGBA'))
+        b = main.bbox
+        return canvas.crop((b[0], b[1], b[2], b[3]))
+
+    # Frente: borrar la grifa (se agrega en post-proceso)
+    fc = build(lShirt, lMain, eF)
+    if gL and lMain:
+        gx = gL.left - lMain.left
+        gy = gL.top  - lMain.top
+        gw = gL.right  - gL.left
+        gh = gL.bottom - gL.top
+        # Rellenar con el color de la remera en esa zona
+        sample = fc.getpixel((max(0, gx - 10), max(0, gy + gh//2)))
+        fill = Image.new('RGBA', (gw + 8, gh + 8), (sample[0], sample[1], sample[2], 255))
+        fc.paste(fill, (max(0, gx - 4), max(0, gy - 4)))
+
+    bc = build(rShirt, rMain, eB)
+    return to_jpeg_b64(fc), to_jpeg_b64(bc)
 `;
 
-async function loadPyodide_(){
-  if(pyodide)return pyodide;
-  if(pyPromise)return pyPromise;
-  pyPromise=(async()=>{
-    const script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js';
-    document.head.appendChild(script);
-    await new Promise((res,rej)=>{script.onload=res;script.onerror=()=>rej(new Error('No se pudo cargar Pyodide'));});
-    const py=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/'});
-    await py.loadPackage(['micropip','pillow','numpy']);
-    await py.runPythonAsync(`import micropip
-await micropip.install('psd-tools')`);
-    pyodide=py;
-    return py;
-  })();
-  return pyPromise;
+async function processPSD(file) {
+  const py = await loadPy();
+  const buf = await file.arrayBuffer();
+  py.globals.set('_b', py.toPy(new Uint8Array(buf)));
+  await py.runPythonAsync(PY);
+  const res = await py.runPythonAsync('process(_b)');
+  const arr = res.toJs();
+  return { front: arr[0], back: arr[1] };
 }
 
-async function readPSDPython(buf){
-  const py=await loadPyodide_();
-  py.globals.set('_b',py.toPy(new Uint8Array(buf)));
-  await py.runPythonAsync(PSD_PYTHON);
-  const res=await py.runPythonAsync('process(_b)');
-  const [front,back]=res.toJs();
-  return{front,back};
+// ── ag-psd quick preview ──────────────────────────────────────────
+function findL(list, name) { return (list||[]).find(l=>l.name===name)||null; }
+function findN(root, ...path) {
+  let cur = root;
+  for (const s of path) { cur = findL(cur.children, s); if(!cur) return null; }
+  return cur;
+}
+function resize(src) {
+  const w=src.width,h=src.height;
+  if(w<=MAX_DIM&&h<=MAX_DIM) return src;
+  const s=MAX_DIM/Math.max(w,h),c=document.createElement('canvas');
+  c.width=Math.round(w*s);c.height=Math.round(h*s);
+  c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;
+}
+function quickPreview(buf) {
+  const psd = agPsd.readPsd(buf, {skipLayerImageData:false,useRawThumbnail:false});
+  const lM = findN(psd,'Working Process','Left Shirt','Objects','Main Object');
+  const rM = findN(psd,'Working Process','Right Shirt','Objects','Main Object');
+  if(!lM||!rM) throw new Error('No se encontraron Left/Right Shirt');
+
+  function crop(mainObj) {
+    if(!mainObj.canvas) return null;
+    const c=document.createElement('canvas');
+    const l=mainObj.left,t=mainObj.top,r=mainObj.right,b=mainObj.bottom;
+    c.width=r-l;c.height=b-t;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(mainObj.canvas,0,0);
+    return resize(c);
+  }
+
+  const fC=crop(lM), bC=crop(rM);
+  return {
+    front: fC ? fC.toDataURL('image/jpeg',.85) : null,
+    back:  bC ? bC.toDataURL('image/jpeg',.85) : null,
+  };
 }
 
 // ── Main file handler ─────────────────────────────────────────────
-async function onFile(file){
-  if(!file)return;
-  document.getElementById('gen-btn').disabled=true;
-  frontDataUrl=null;backDataUrl=null;
-  try{
+async function onFile(file) {
+  if(!file) return;
+  document.getElementById('gen-btn').disabled = true;
+  frontDataUrl = null; backDataUrl = null;
+
+  try {
     st('Leyendo PSD…');
-    const buf=await file.arrayBuffer();
+    const buf = await file.arrayBuffer();
 
-    // PASO 1: ag-psd (instantáneo, siempre funciona)
-    const res=readPSDagPsd(buf);
-    frontDataUrl=res.front;backDataUrl=res.back;
-    document.getElementById('preview-front').src=res.front;
-    document.getElementById('preview-back').src=res.back;
-    document.getElementById('preview-row').style.display='flex';
-    document.getElementById('gen-btn').disabled=false;
+    // Preview rápido con ag-psd (puede ser incompleto, solo para ver)
+    try {
+      const prev = quickPreview(buf);
+      if(prev.front) document.getElementById('preview-front').src = prev.front;
+      if(prev.back)  document.getElementById('preview-back').src  = prev.back;
+      document.getElementById('preview-row').style.display = 'flex';
+    } catch(e) { console.warn('Preview error:', e); }
 
-    if(!res.hasVector){
-      st('✓ PSD listo');
-      return;
-    }
+    // Procesamiento completo con Python (fiel al PSD)
+    st('Procesando PSD con Python (20-40s la primera vez)…');
+    const result = await processPSD(file);
+    frontDataUrl = result.front;
+    backDataUrl  = result.back;
 
-    // PASO 2: tiene vectores → mejorar con Python en background
-    st('Estampas vectoriales — mejorando con Python (puede tardar ~30s)…');
-    try{
-      const pyRes=await readPSDPython(buf);
-      frontDataUrl=pyRes.front;backDataUrl=pyRes.back;
-      document.getElementById('preview-front').src=pyRes.front;
-      document.getElementById('preview-back').src=pyRes.back;
-      st('✓ PSD listo (con estampas vectoriales)');
-    }catch(e){
-      // Python falló pero ya tenemos la versión de ag-psd — continuar igual
-      st('⚠️ No se pudo renderizar vectores: '+e.message+'. Generando sin estampa.');
-      console.error('Python PSD error:',e);
-    }
-  }catch(err){
-    console.error(err);st('Error: '+err.message,true);
+    // Actualizar preview con el resultado correcto
+    document.getElementById('preview-front').src = frontDataUrl;
+    document.getElementById('preview-back').src  = backDataUrl;
+    document.getElementById('preview-row').style.display = 'flex';
+    document.getElementById('gen-btn').disabled = false;
+    st('✓ PSD procesado — listo para generar');
+
+  } catch(err) {
+    console.error(err);
+    st('Error: ' + err.message, true);
   }
 }
 
 // ── Post-proceso ─────────────────────────────────────────────────
-function detectOff(d,w,h){
+function detectOff(d,w,h) {
   const avg=(x,y)=>{const i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;};
   const fondo=(avg(20,20)+avg(w-20,20))/2;
   const cs=[];
-  for(let y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15){
+  for(let y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15) {
     let l=-1,r=-1;
     for(let x=0;x<w;x++){const i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){l=x;break;}}
     for(let x=w-1;x>=0;x--){const i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){r=x;break;}}
-    if(l>0&&r>0&&r-l>w*.25)cs.push((l+r)/2);
+    if(l>0&&r>0&&r-l>w*.25) cs.push((l+r)/2);
   }
-  if(!cs.length)return 0;
+  if(!cs.length) return 0;
   const s=cs.slice().sort((a,b)=>a-b);
   let o=Math.round(s[Math.floor(s.length/2)]-w/2);
   return Math.max(-180,Math.min(180,Math.abs(o)<15?0:o));
 }
-function center(canvas,ctx,off){
-  if(!off)return;
+function center(canvas,ctx,off) {
+  if(!off) return;
   const tmp=document.createElement('canvas');tmp.width=canvas.width;tmp.height=canvas.height;
   tmp.getContext('2d').drawImage(canvas,0,0);
   const bg=ctx.getImageData(20,20,1,1).data;
-  ctx.fillStyle=`rgb(${bg[0]},${bg[1]},${bg[2]})`;ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=`rgb(${bg[0]},${bg[1]},${bg[2]})`;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(tmp,-off,0);
 }
-function removeArt(id,y1,y2,x1,x2,rows=15){
+function removeArt(id,y1,y2,x1,x2,rows=15) {
   const{data:d,width:w,height:h}=id;const above=[],below=[];
-  for(let x=x1;x<x2;x++){
+  for(let x=x1;x<x2;x++) {
     let r=0,g=0,b=0,n=0;
     for(let y=Math.max(0,y1-rows);y<y1;y++){const i=(y*w+x)*4;r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
-    above.push(n?[r/n,g/n,b/n]:[230,230,230]);r=g=b=n=0;
+    above.push(n?[r/n,g/n,b/n]:[230,230,230]);
+    r=g=b=n=0;
     for(let y=y2;y<Math.min(h,y2+rows);y++){const i=(y*w+x)*4;r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
     below.push(n?[r/n,g/n,b/n]:[230,230,230]);
   }
-  for(let row=0;row<y2-y1;row++){
+  for(let row=0;row<y2-y1;row++) {
     const t=(y2-y1)>1?row/(y2-y1-1):0;
-    for(let col=0;col<x2-x1;col++){
+    for(let col=0;col<x2-x1;col++) {
       const i=((y1+row)*w+(x1+col))*4;
-      d[i]=Math.round(above[col][0]*(1-t)+below[col][0]*t);
+      d[i]  =Math.round(above[col][0]*(1-t)+below[col][0]*t);
       d[i+1]=Math.round(above[col][1]*(1-t)+below[col][1]*t);
       d[i+2]=Math.round(above[col][2]*(1-t)+below[col][2]*t);
     }
   }
   return id;
 }
-async function postProcess(imgUrl,isFront){
-  return new Promise((resolve,reject)=>{
+async function postProcess(imgUrl, isFront) {
+  return new Promise((resolve, reject) => {
     const img=new Image();img.crossOrigin='anonymous';
     img.onerror=()=>reject(new Error('No se pudo cargar imagen'));
     img.onload=()=>{
-      const c=document.getElementById('work-canvas');c.width=img.width;c.height=img.height;
+      const c=document.getElementById('work-canvas');
+      c.width=img.width;c.height=img.height;
       const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
       center(c,ctx,detectOff(ctx.getImageData(0,0,c.width,c.height).data,c.width,c.height));
-      if(isFront){
+      if(isFront) {
         let id=ctx.getImageData(0,0,c.width,c.height);
-        id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);ctx.putImageData(id,0,0);
+        id=removeArt(id,LABEL.y1,LABEL.y2,LABEL.x1,LABEL.x2);
+        ctx.putImageData(id,0,0);
         const ci=ctx.getImageData(0,0,c.width,c.height);
         const cf=(ci.data[20*4]+ci.data[20*4+1]+ci.data[20*4+2])/3*.5
                +(ci.data[(20*c.width+(c.width-20))*4]+ci.data[(20*c.width+(c.width-20))*4+1]+ci.data[(20*c.width+(c.width-20))*4+2])/3*.5;
         const edges=[];
         for(let sy=Math.floor(c.height*.51);sy<Math.floor(c.height*.57);sy+=4)
-          for(let sx=c.width-1;sx>=c.width/2;sx--){
+          for(let sx=c.width-1;sx>=c.width/2;sx--) {
             const si=(sy*c.width+sx)*4;
             if(Math.abs((ci.data[si]+ci.data[si+1]+ci.data[si+2])/3-cf)>18){edges.push(sx);break;}
           }
         const se=edges.length?edges.slice().sort((a,b)=>a-b)[Math.floor(edges.length/2)]:c.width-80;
         const g=new Image();
         g.onload=()=>{ctx.drawImage(g,se-g.width,Math.floor(c.height*.555));resolve(c.toDataURL('image/jpeg',.95));};
-        g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95));g.src=GRIFA;
-      }else resolve(c.toDataURL('image/jpeg',.95));
-    };img.src=imgUrl;
+        g.onerror=()=>resolve(c.toDataURL('image/jpeg',.95));
+        g.src=GRIFA;
+      } else {
+        resolve(c.toDataURL('image/jpeg',.95));
+      }
+    };
+    img.src=imgUrl;
   });
 }
 
 // ── API ──────────────────────────────────────────────────────────
-async function apiPost(q,body){const res=await fetch(`/api/topview?${q}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const txt=await res.text();try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,300)}`);}}
-async function apiGet(q){const res=await fetch(`/api/topview?${q}`);const txt=await res.text();try{return JSON.parse(txt);}catch{throw new Error(`HTTP ${res.status}: ${txt.slice(0,300)}`);}}
-async function upload(b64){const d=await apiPost('upload=1',{imageBase64:b64});if(!d.ok)throw new Error('Upload: '+(d.error||JSON.stringify(d)));return d.fileId;}
-async function submit(p,t,m){const d=await apiPost('submit=1',{productImageFileId:p,templateImageFileId:t,templateMaskFileId:m});if(!d.ok)throw new Error('Submit: '+(d.error||JSON.stringify(d)));return d.taskId;}
-async function poll(taskId,cb){
-  for(let i=0;i<40;i++){
+async function apiPost(q,body) {
+  const res=await fetch('/api/topview?'+q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const txt=await res.text();
+  try{return JSON.parse(txt);}catch{throw new Error('HTTP '+res.status+': '+txt.slice(0,300));}
+}
+async function apiGet(q) {
+  const res=await fetch('/api/topview?'+q);
+  const txt=await res.text();
+  try{return JSON.parse(txt);}catch{throw new Error('HTTP '+res.status+': '+txt.slice(0,300));}
+}
+async function upload(b64) {
+  const d=await apiPost('upload=1',{imageBase64:b64});
+  if(!d.ok) throw new Error('Upload: '+(d.error||JSON.stringify(d)));
+  return d.fileId;
+}
+async function submit(p,t,m) {
+  const d=await apiPost('submit=1',{productImageFileId:p,templateImageFileId:t,templateMaskFileId:m});
+  if(!d.ok) throw new Error('Submit: '+(d.error||JSON.stringify(d)));
+  return d.taskId;
+}
+async function poll(taskId, cb) {
+  for(let i=0;i<40;i++) {
     await new Promise(r=>setTimeout(r,3000));
-    let d;try{d=await apiGet(`query=${encodeURIComponent(taskId)}`);}catch(e){console.warn('poll',e);continue;}
-    if(d.code!=='200')throw new Error('TopView: '+JSON.stringify(d).slice(0,300));
-    const r=d.result||d,s=r.status||'?';
-    if(cb)cb(s,i);console.log(`Poll ${i+1} status=${s}`);
-    if(s==='success'){const url=(r.anyfitImages||[])[0]?.url;if(!url)throw new Error('Sin URL: '+JSON.stringify(d).slice(0,200));return url;}
-    if(s==='fail'||s==='failed')throw new Error('Tarea fallida: '+(r.errorMsg||'?'));
+    let d;
+    try{d=await apiGet('query='+encodeURIComponent(taskId));}
+    catch(e){console.warn('poll',e);continue;}
+    if(d.code!=='200') throw new Error('TopView: '+JSON.stringify(d).slice(0,300));
+    const r=d.result||d, s=r.status||'?';
+    if(cb) cb(s,i);
+    console.log('Poll '+(i+1)+' status='+s);
+    if(s==='success') {
+      const url=(r.anyfitImages||[])[0]&&(r.anyfitImages||[])[0].url;
+      if(!url) throw new Error('Sin URL: '+JSON.stringify(d).slice(0,200));
+      return url;
+    }
+    if(s==='fail'||s==='failed') throw new Error('Tarea fallida: '+(r.errorMsg||'?'));
   }
   throw new Error('Timeout (2min). Intentá de nuevo.');
 }
-async function generate(){
-  if(!frontDataUrl||!backDataUrl)return;
+async function generate() {
+  if(!frontDataUrl||!backDataUrl) return;
   const btn=document.getElementById('gen-btn');btn.disabled=true;
   document.getElementById('results').style.display='none';
-  try{
+  try {
     const b64=url=>url.split(',')[1];
     st('Subiendo frente…');const fId=await upload(b64(frontDataUrl));
     st('Subiendo espalda…');const bId=await upload(b64(backDataUrl));
     st('Creando tareas…');
-    const [fTask,bTask]=await Promise.all([submit(fId,TMPL_F,MASK_F),submit(bId,TMPL_B,MASK_B)]);
-    st('Generando (30–60s)…');
-    const [fUrl,bUrl]=await Promise.all([poll(fTask,(s,i)=>st(`Generando… ${i*3}s — frente:${s}`)),poll(bTask)]);
+    const fTask=(await Promise.all([submit(fId,TMPL_F,MASK_F),submit(bId,TMPL_B,MASK_B)]));
+    st('Generando (30-60s)…');
+    const urls=await Promise.all([
+      poll(fTask[0],(s,i)=>st('Generando… '+(i*3)+'s — frente:'+s)),
+      poll(fTask[1]),
+    ]);
     st('Post-proceso…');
-    const [fp,bp]=await Promise.all([postProcess(`/api/topview?proxy=${encodeURIComponent(fUrl)}`,true),postProcess(`/api/topview?proxy=${encodeURIComponent(bUrl)}`,false)]);
-    document.getElementById('result-front').src=fp;document.getElementById('result-back').src=bp;
-    document.getElementById('dl-front').href=fp;document.getElementById('dl-back').href=bp;
-    document.getElementById('results').style.display='flex';st('✓ Listo');
-  }catch(err){console.error(err);st('Error: '+err.message,true);}
+    const fp=await postProcess('/api/topview?proxy='+encodeURIComponent(urls[0]),true);
+    const bp=await postProcess('/api/topview?proxy='+encodeURIComponent(urls[1]),false);
+    document.getElementById('result-front').src=fp;
+    document.getElementById('result-back').src=bp;
+    document.getElementById('dl-front').href=fp;
+    document.getElementById('dl-back').href=bp;
+    document.getElementById('results').style.display='flex';
+    st('✓ Listo');
+  } catch(err) {
+    console.error(err);st('Error: '+err.message,true);
+  }
   btn.disabled=false;
 }
 
@@ -410,6 +429,6 @@ dz.addEventListener('dragleave',()=>dz.classList.remove('active'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('active');onFile(e.dataTransfer.files[0]);});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/ag-psd@latest/dist/bundle.js"
-  onerror="st('Error cargando ag-psd — verificá tu conexión','err')"></script>
+  onerror="st('Error cargando ag-psd','err')"></script>
 </body>
 </html>
