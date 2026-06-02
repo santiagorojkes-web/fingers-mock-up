@@ -190,12 +190,12 @@ async function postProcess(imgUrl,isFront){
         var ci=ctx.getImageData(0,0,c.width,c.height);var cw=c.width,ch=c.height;
         var cf=(ci.data[20*4]+ci.data[20*4+1]+ci.data[20*4+2])/3*.5+(ci.data[(20*cw+(cw-20))*4]+ci.data[(20*cw+(cw-20))*4+1]+ci.data[(20*cw+(cw-20))*4+2])/3*.5;
         var edges=[];
-        for(var sy=Math.floor(ch*.56);sy<Math.floor(ch*.62);sy+=4)
+        for(var sy=Math.floor(ch*.62);sy<Math.floor(ch*.70);sy+=4)
           for(var sx=cw-1;sx>=cw/2;sx--){var si=(sy*cw+sx)*4;if(Math.abs((ci.data[si]+ci.data[si+1]+ci.data[si+2])/3-cf)>18){edges.push(sx);break;}}
         edges.sort(function(a,b){return a-b;});
         var se=edges.length?edges[Math.floor(edges.length/2)]:cw-80;
         var g=new Image();
-        g.onload=function(){ctx.drawImage(g,se-g.width,Math.floor(ch*.595));resolve(c.toDataURL("image/jpeg",.95));};
+        g.onload=function(){ctx.drawImage(g,se-g.width,Math.floor(ch*.645));resolve(c.toDataURL("image/jpeg",.95));};
         g.onerror=function(){resolve(c.toDataURL("image/jpeg",.95));};
         g.src=GRIFA;
       }else{resolve(c.toDataURL("image/jpeg",.95));}
