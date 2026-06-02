@@ -42,8 +42,8 @@ header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:4
   <div class="upload-icon">&#8853;</div>
   <div class="upload-title">Subir archivo PSD</div>
   <div class="upload-hint">Soporta todo tipo de capas</div>
-  <button class="upload-btn" id="upload-btn">Seleccionar archivo</button>
-  <input type="file" id="file-input" accept=".psd,.PSD">
+  <label class="upload-btn" for="file-input" style="display:inline-block;cursor:pointer">Seleccionar archivo</label>
+  <input type="file" id="file-input" accept="*" style="display:none">
 </div>
 <div id="preview-row" style="display:none;flex-direction:row;gap:16px;max-width:640px;margin:0 auto 28px">
   <div class="preview-box"><div class="preview-img"><img id="preview-front" src="" alt="Frente"></div><div class="preview-lbl">Frente</div></div>
@@ -239,14 +239,12 @@ async function generate(){
 }
 
 // File input — use label trick for maximum browser compatibility
-document.getElementById("upload-btn").addEventListener("click", function(){
-  document.getElementById("file-input").click();
-});
 document.getElementById("file-input").addEventListener("change",function(){
   if(this.files&&this.files[0]) onFile(this.files[0]);
   this.value="";
 });
 var dz=document.getElementById("drop-zone");
+dz.addEventListener("click",function(e){if(e.target.tagName!=="LABEL")document.getElementById("file-input").click();});
 dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("active");});
 dz.addEventListener("dragleave",function(){dz.classList.remove("active");});
 dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("active");if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0]);});
