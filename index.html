@@ -150,7 +150,7 @@ function detectOff(d,w,h){
   if(!cs.length)return 0;
   cs.sort(function(a,b){return a-b;});
   var o=Math.round(cs[Math.floor(cs.length/2)]-w/2);
-  return Math.max(-60,Math.min(60,Math.abs(o)<15?0:o));
+  return Math.max(-180,Math.min(180,Math.abs(o)<15?0:o));
 }
 function center(canvas,ctx,off){
   if(!off)return;
