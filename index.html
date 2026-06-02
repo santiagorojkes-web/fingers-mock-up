@@ -138,20 +138,7 @@ async function onFile(file){
   }catch(err){console.error(err);st("Error: "+err.message,true);}
 }
 
-function detectOff(d,w,h){
-  function avg(x,y){var i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;}
-  var fondo=(avg(20,20)+avg(w-20,20))/2,cs=[];
-  for(var y=Math.floor(h*.45);y<Math.floor(h*.82);y+=15){
-    var l=-1,r=-1;
-    for(var x=0;x<w;x++){var i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){l=x;break;}}
-    for(var x=w-1;x>=0;x--){var i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>18){r=x;break;}}
-    if(l>0&&r>0&&r-l>w*.25)cs.push((l+r)/2);
-  }
-  if(!cs.length)return 0;
-  cs.sort(function(a,b){return a-b;});
-  var o=Math.round(cs[Math.floor(cs.length/2)]-w/2);
-  return Math.max(-180,Math.min(180,Math.abs(o)<15?0:o));
-}
+function detectOff(d,w,h){ return 0; }
 function center(canvas,ctx,off){
   if(!off)return;
   var tmp=document.createElement("canvas");tmp.width=canvas.width;tmp.height=canvas.height;tmp.getContext("2d").drawImage(canvas,0,0);
