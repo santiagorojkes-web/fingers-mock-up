@@ -139,21 +139,6 @@ async function onFile(file){
 }
 
 function detectOff(d,w,h){ return 0; }
-  var fondo=(avg(10,10)+avg(w-10,10)+avg(10,20)+avg(w-10,20))/4, cs=[];
-  for(var y=Math.floor(h*.40);y<Math.floor(h*.75);y+=12){
-    var l=-1,r=-1;
-    for(var x=0;x<w;x++){var i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>22){l=x;break;}}
-    for(var x=w-1;x>=0;x--){var i=(y*w+x)*4;if(Math.abs((d[i]+d[i+1]+d[i+2])/3-fondo)>22){r=x;break;}}
-    if(l>0&&r>0&&r-l>w*.3&&r-l<w*.95)cs.push((l+r)/2);
-  }
-  if(cs.length<3)return 0;
-  cs.sort(function(a,b){return a-b;});
-  var med=cs[Math.floor(cs.length/2)];
-  var o=Math.round(med-w/2);
-  if(Math.abs(o)<15)return 0;   // already centered
-  if(Math.abs(o)>150)return 0;  // too large = detection error, skip
-  return o;
-}
 function center(canvas,ctx,off){
   if(!off)return;
   var w=canvas.width,h=canvas.height;
