@@ -138,8 +138,7 @@ async function onFile(file){
   }catch(err){console.error(err);st("Error: "+err.message,true);}
 }
 
-function detectOff(d,w,h){
-  function avg(x,y){var i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;}
+function detectOff(d,w,h){ return 0; }
   var fondo=(avg(10,10)+avg(w-10,10)+avg(10,20)+avg(w-10,20))/4, cs=[];
   for(var y=Math.floor(h*.40);y<Math.floor(h*.75);y+=12){
     var l=-1,r=-1;
