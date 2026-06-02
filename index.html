@@ -138,7 +138,30 @@ async function onFile(file){
   }catch(err){console.error(err);st("Error: "+err.message,true);}
 }
 
-function detectOff(d,w,h){ return 0; }
+function detectOff(d,w,h){
+  var w2=Math.floor(w/2);
+  function brightness(x,y){var i=(y*w+x)*4;return(d[i]+d[i+1]+d[i+2])/3;}
+  // Sample background from corners (average of 8 corner pixels)
+  var bg=(brightness(5,5)+brightness(w-5,5)+brightness(5,10)+brightness(w-5,10)+
+          brightness(5,20)+brightness(w-5,20)+brightness(5,30)+brightness(w-5,30))/8;
+  var centers=[];
+  // Scan middle band of image (50-72% height = shirt body, not arms/head)
+  for(var y=Math.floor(h*.50);y<Math.floor(h*.72);y+=10){
+    var l=-1,r=-1;
+    for(var x=0;x<w;x++){if(Math.abs(brightness(x,y)-bg)>25){l=x;break;}}
+    for(var x=w-1;x>=0;x--){if(Math.abs(brightness(x,y)-bg)>25){r=x;break;}}
+    // Only use scan lines where shirt spans at least 35% of width
+    if(l>0&&r>l&&(r-l)>w*.35&&(r-l)<w*.90)centers.push((l+r)/2);
+  }
+  if(centers.length<4)return 0; // not enough data
+  centers.sort(function(a,b){return a-b;});
+  var median=centers[Math.floor(centers.length/2)];
+  var offset=Math.round(median-w2);
+  // Only correct small real offsets (20-45px)
+  if(Math.abs(offset)<20)return 0;  // already centered
+  if(Math.abs(offset)>45)return 0;  // too large = detection error
+  return offset;
+}
 function center(canvas,ctx,off){
   if(!off)return;
   var w=canvas.width,h=canvas.height;
