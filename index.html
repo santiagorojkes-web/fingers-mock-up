@@ -152,7 +152,7 @@ function detectOff(d,w,h){
   var med=cs[Math.floor(cs.length/2)];
   var o=Math.round(med-w/2);
   if(Math.abs(o)<15)return 0;   // already centered
-  if(Math.abs(o)>60)return 0;   // too large = detection error, skip
+  if(Math.abs(o)>150)return 0;  // too large = detection error, skip
   return o;
 }
 function center(canvas,ctx,off){
